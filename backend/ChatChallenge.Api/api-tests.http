@@ -1,0 +1,89 @@
+### Register User 1
+POST http://localhost:5016/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "userName": "alice",
+  "password": "password123"
+}
+
+### Register User 2
+POST http://localhost:5016/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "userName": "bob",
+  "password": "password123"
+}
+
+### Login User 1
+POST http://localhost:5016/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "password123"
+}
+
+### Login User 2
+POST http://localhost:5016/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "password": "password123"
+}
+
+###
+@token1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR_TOKEN_HERE
+@token2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR_TOKEN_HERE
+
+### Get Rooms (User 1)
+GET http://localhost:5016/api/chat/rooms
+Authorization: Bearer {{token1}}
+
+### Create Room (User 1)
+POST http://localhost:5016/api/chat/rooms
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{
+  "name": "General Chat"
+}
+
+### Send Message from User 1
+POST http://localhost:5016/api/chat/rooms/1/messages
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{
+  "content": "Hello from Alice!"
+}
+
+### Send Message from User 2
+POST http://localhost:5016/api/chat/rooms/1/messages
+Authorization: Bearer {{token2}}
+Content-Type: application/json
+
+{
+  "content": "Hello from Bob!"
+}
+
+### Get Messages (User 1)
+GET http://localhost:5016/api/chat/rooms/1/messages?count=50
+Authorization: Bearer {{token1}}
+
+### Get Messages (User 2)
+GET http://localhost:5016/api/chat/rooms/1/messages?count=50
+Authorization: Bearer {{token2}}
+
+### Test Stock Command (User 1)
+POST http://localhost:5016/api/chat/rooms/1/messages
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{
+  "content": "/stock=aapl.us"
+}
