@@ -2,15 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Security.Claims;
 using ChatChallenge.Infrastructure.Data;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Infrastructure.Repositories;
 using ChatChallenge.Api.Services;
+using ChatChallenge.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ChatDbContext>(options =>
@@ -46,6 +51,46 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Configure SignalR authentication
+    options.Events = new JwtBearerEvents
+    {
+      OnMessageReceived = context =>
+      {
+        // Check if the request is for SignalR hub
+        var accessToken = context.Request.Query["access_token"];
+        var path = context.HttpContext.Request.Path;
+        
+        // If the request is for our hub and we have an access token
+        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+        {
+          context.Token = accessToken;
+        }
+        return Task.CompletedTask;
+      },
+      OnAuthenticationFailed = context =>
+      {
+        // Log authentication failures for debugging
+        if (context.Request.Path.StartsWithSegments("/chathub"))
+        {
+          Console.WriteLine($"SignalR JWT Authentication failed: {context.Exception.Message}");
+        }
+        return Task.CompletedTask;
+      },
+      OnTokenValidated = context =>
+      {
+        // Optional: Add custom claims validation for SignalR
+        if (context.Request.Path.StartsWithSegments("/chathub"))
+        {
+          var userName = context.Principal?.FindFirst(ClaimTypes.Name)?.Value;
+          if (string.IsNullOrEmpty(userName))
+          {
+            context.Fail("Username claim is required for SignalR connections");
+          }
+        }
+        return Task.CompletedTask;
+      }
+    };
 });
 
 // Configure CORS for frontend
@@ -57,7 +102,7 @@ builder.Services.AddCors(options =>
       policy.WithOrigins("http://localhost:3000")
         .AllowAnyMethod()
         .AllowAnyHeader()
-        .AllowCredentials();
+        .AllowCredentials(); // Required for SignalR
     });
 });
 
@@ -111,5 +156,8 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR Hub
+app.MapHub<ChatHub>("/chathub");
 
 app.Run();

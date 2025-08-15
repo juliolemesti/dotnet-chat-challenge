@@ -68,10 +68,10 @@ public class ChatHub : Hub
         isStockBot = savedMessage.IsStockBot
       });
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       await Clients.Caller.SendAsync("Error", "Failed to send message");
-      // Log the exception in a real application
+      // TODO: Add proper logging in production
     }
   }
 
