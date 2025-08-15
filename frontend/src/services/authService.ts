@@ -1,5 +1,5 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import { AuthResponse, LoginRequest, RegisterRequest, ApiError } from '../types'
+import { AuthResponse, LoginRequest, RegisterRequest } from '../types'
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7042/api'
 
