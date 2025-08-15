@@ -5,6 +5,7 @@ using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
 using ChatChallenge.Api.Models;
 using ChatChallenge.Api.Extensions;
+using ChatChallenge.Api.Services;
 
 namespace ChatChallenge.Api.Hubs;
 
@@ -12,10 +13,12 @@ namespace ChatChallenge.Api.Hubs;
 public class ChatHub : Hub
 {
   private readonly IChatRepository _chatRepository;
+  private readonly IStockBotService _stockBotService;
 
-  public ChatHub(IChatRepository chatRepository)
+  public ChatHub(IChatRepository chatRepository, IStockBotService stockBotService)
   {
     _chatRepository = chatRepository;
+    _stockBotService = stockBotService;
   }
 
   /// <summary>
@@ -29,22 +32,14 @@ public class ChatHub : Hub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {
-      var errorDto = new SignalRErrorDto
-      {
-        Message = "Authentication required",
-        Code = "AUTH_REQUIRED"
-      };
+      var errorDto = SignalRExtensions.CreateErrorDto("Authentication required", "AUTH_REQUIRED");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     if (string.IsNullOrWhiteSpace(message))
     {
-      var errorDto = new SignalRErrorDto
-      {
-        Message = "Message cannot be empty",
-        Code = "EMPTY_MESSAGE"
-      };
+      var errorDto = SignalRExtensions.CreateErrorDto("Message cannot be empty", "EMPTY_MESSAGE");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
@@ -52,16 +47,19 @@ public class ChatHub : Hub
     // Parse roomId to integer
     if (!int.TryParse(roomId, out int roomIdInt))
     {
-      var errorDto = new SignalRErrorDto
-      {
-        Message = "Invalid room ID",
-        Code = "INVALID_ROOM_ID"
-      };
+      var errorDto = SignalRExtensions.CreateErrorDto("Invalid room ID", "INVALID_ROOM_ID");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
-    // Create and save the message to database
+    // Check if this is a stock bot command
+    if (IsStockCommand(message))
+    {
+      await HandleStockCommand(roomId, message, userName);
+      return;
+    }
+
+    // Create and save the regular message to database
     var chatMessage = new ChatMessage
     {
       Content = message,
@@ -207,5 +205,79 @@ public class ChatHub : Hub
     // Clean up any room memberships if needed
     // In a production app, you might want to track user presence
     await base.OnDisconnectedAsync(exception);
+  }
+
+  /// <summary>
+  /// Check if a message is a stock command
+  /// </summary>
+  /// <param name="message">The message to check</param>
+  /// <returns>True if the message is a stock command</returns>
+  private bool IsStockCommand(string message)
+  {
+    return message.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase) && 
+           !string.IsNullOrEmpty(_stockBotService.ExtractStockSymbol(message));
+  }
+
+  /// <summary>
+  /// Handle stock bot commands (preparation for future RabbitMQ integration)
+  /// </summary>
+  /// <param name="roomId">The room ID where the command was sent</param>
+  /// <param name="command">The stock command</param>
+  /// <param name="userName">The user who sent the command</param>
+  private async Task HandleStockCommand(string roomId, string command, string userName)
+  {
+    try
+    {
+      // Extract stock symbol using the service
+      var stockSymbol = _stockBotService.ExtractStockSymbol(command);
+      
+      if (string.IsNullOrEmpty(stockSymbol))
+      {
+        var errorDto = SignalRExtensions.CreateErrorDto("Invalid stock command format. Use: /stock=SYMBOL", "INVALID_STOCK_COMMAND");
+        await Clients.Caller.SendAsync("Error", errorDto);
+        return;
+      }
+
+      // Queue the stock request (future RabbitMQ implementation)
+      await _stockBotService.QueueStockRequestAsync(stockSymbol, userName, roomId);
+
+      // Send placeholder response for now
+      await SendStockBotPlaceholderResponse(roomId, stockSymbol, userName);
+    }
+    catch (Exception)
+    {
+      var errorDto = SignalRExtensions.CreateErrorDto("Failed to process stock command", "STOCK_COMMAND_ERROR");
+      await Clients.Caller.SendAsync("Error", errorDto);
+    }
+  }
+
+  /// <summary>
+  /// Send a placeholder stock bot response (temporary implementation)
+  /// </summary>
+  /// <param name="roomId">The room ID</param>
+  /// <param name="stockSymbol">The requested stock symbol</param>
+  /// <param name="requestingUser">The user who requested the stock info</param>
+  private async Task SendStockBotPlaceholderResponse(string roomId, string stockSymbol, string requestingUser)
+  {
+    // Create a placeholder bot response message
+    var botMessage = new SignalRMessageDto
+    {
+      Id = 0, // Temporary ID since this won't be saved to database yet
+      Content = $"{stockSymbol} quote is not available yet. Stock bot service is not implemented.",
+      UserName = "StockBot",
+      RoomId = int.Parse(roomId),
+      CreatedAt = DateTime.UtcNow,
+      IsStockBot = true
+    };
+
+    // Broadcast the bot response to all clients in the room
+    await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", botMessage);
+
+    // TODO: Remove this placeholder when RabbitMQ integration is implemented
+    // The actual flow will be:
+    // 1. Queue stock request in RabbitMQ
+    // 2. External bot service processes queue
+    // 3. Bot service calls stooq.com API
+    // 4. Bot service sends response back via SignalR hub
   }
 }

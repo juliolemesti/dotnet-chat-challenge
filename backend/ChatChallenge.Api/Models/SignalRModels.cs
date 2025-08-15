@@ -75,3 +75,29 @@ public class SignalRRoomStatsDto
   public int MessageCount { get; set; }
   public DateTime LastActivity { get; set; }
 }
+
+/// <summary>
+/// DTO for stock bot commands (preparation for RabbitMQ integration)
+/// </summary>
+public class SignalRStockCommandDto
+{
+  public string StockSymbol { get; set; } = string.Empty;
+  public string RequestedBy { get; set; } = string.Empty;
+  public string RoomId { get; set; } = string.Empty;
+  public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
+  public string? Status { get; set; } // "Pending", "Processing", "Completed", "Failed"
+}
+
+/// <summary>
+/// DTO for stock bot responses
+/// </summary>
+public class SignalRStockResponseDto
+{
+  public string StockSymbol { get; set; } = string.Empty;
+  public decimal? Price { get; set; }
+  public string FormattedMessage { get; set; } = string.Empty;
+  public string RequestedBy { get; set; } = string.Empty;
+  public DateTime ResponseAt { get; set; } = DateTime.UtcNow;
+  public bool IsError { get; set; } = false;
+  public string? ErrorMessage { get; set; }
+}

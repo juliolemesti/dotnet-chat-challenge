@@ -76,4 +76,51 @@ public static class SignalRExtensions
       ConnectedAt = DateTime.UtcNow
     };
   }
+
+  /// <summary>
+  /// Creates a SignalR stock command DTO
+  /// </summary>
+  public static SignalRStockCommandDto CreateStockCommandDto(string stockSymbol, string requestedBy, string roomId)
+  {
+    return new SignalRStockCommandDto
+    {
+      StockSymbol = stockSymbol,
+      RequestedBy = requestedBy,
+      RoomId = roomId,
+      RequestedAt = DateTime.UtcNow,
+      Status = "Pending"
+    };
+  }
+
+  /// <summary>
+  /// Creates a SignalR stock response DTO for successful responses
+  /// </summary>
+  public static SignalRStockResponseDto CreateStockResponseDto(string stockSymbol, decimal price, string requestedBy)
+  {
+    return new SignalRStockResponseDto
+    {
+      StockSymbol = stockSymbol,
+      Price = price,
+      FormattedMessage = $"{stockSymbol} quote is ${price:F2} per share",
+      RequestedBy = requestedBy,
+      ResponseAt = DateTime.UtcNow,
+      IsError = false
+    };
+  }
+
+  /// <summary>
+  /// Creates a SignalR stock response DTO for error responses
+  /// </summary>
+  public static SignalRStockResponseDto CreateStockErrorResponseDto(string stockSymbol, string errorMessage, string requestedBy)
+  {
+    return new SignalRStockResponseDto
+    {
+      StockSymbol = stockSymbol,
+      FormattedMessage = $"Unable to retrieve quote for {stockSymbol}: {errorMessage}",
+      RequestedBy = requestedBy,
+      ResponseAt = DateTime.UtcNow,
+      IsError = true,
+      ErrorMessage = errorMessage
+    };
+  }
 }

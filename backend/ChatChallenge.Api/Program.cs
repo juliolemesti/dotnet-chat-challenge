@@ -28,6 +28,9 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 // Register JWT service
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// Register Stock Bot service (placeholder for future RabbitMQ integration)
+builder.Services.AddScoped<IStockBotService, StockBotService>();
+
 // Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is not configured");
