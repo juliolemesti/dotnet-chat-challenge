@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
+using ChatChallenge.Api.Hubs;
+using ChatChallenge.Api.Models;
 
 namespace ChatChallenge.Api.Controllers;
 
@@ -12,10 +15,12 @@ namespace ChatChallenge.Api.Controllers;
 public class ChatController : ControllerBase
 {
   private readonly IChatRepository _chatRepository;
+  private readonly IHubContext<ChatHub> _hubContext;
 
-  public ChatController(IChatRepository chatRepository)
+  public ChatController(IChatRepository chatRepository, IHubContext<ChatHub> hubContext)
   {
     _chatRepository = chatRepository;
+    _hubContext = hubContext;
   }
 
   [HttpGet("rooms")]
@@ -42,6 +47,11 @@ public class ChatController : ControllerBase
       return Unauthorized("Invalid token: username not found");
     }
 
+    if (string.IsNullOrWhiteSpace(request.Content))
+    {
+      return BadRequest("Message content cannot be empty");
+    }
+
     var message = new ChatMessage
     {
       Content = request.Content,
@@ -50,20 +60,69 @@ public class ChatController : ControllerBase
       IsStockBot = false
     };
 
-    var savedMessage = await _chatRepository.AddMessageAsync(message);
-    return CreatedAtAction(nameof(GetMessages), new { roomId }, savedMessage);
+    try
+    {
+      // Save message to database
+      var savedMessage = await _chatRepository.AddMessageAsync(message);
+
+      // Create SignalR DTO for broadcasting
+      var messageDto = new SignalRMessageDto
+      {
+        Id = savedMessage.Id,
+        Content = savedMessage.Content,
+        UserName = savedMessage.UserName,
+        RoomId = savedMessage.ChatRoomId,
+        CreatedAt = savedMessage.CreatedAt,
+        IsStockBot = savedMessage.IsStockBot
+      };
+
+      // Broadcast message to SignalR clients in the room
+      await _hubContext.Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
+
+      return CreatedAtAction(nameof(GetMessages), new { roomId }, savedMessage);
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, "Failed to send message");
+    }
   }
 
   [HttpPost("rooms")]
   public async Task<ActionResult<ChatRoom>> CreateRoom([FromBody] CreateRoomRequest request)
   {
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+      return BadRequest("Room name cannot be empty");
+    }
+
     var room = new ChatRoom
     {
       Name = request.Name
     };
 
-    var savedRoom = await _chatRepository.CreateRoomAsync(room);
-    return CreatedAtAction(nameof(GetRooms), savedRoom);
+    try
+    {
+      // Save room to database
+      var savedRoom = await _chatRepository.CreateRoomAsync(room);
+
+      // Create SignalR DTO for broadcasting
+      var roomDto = new SignalRRoomDto
+      {
+        Id = savedRoom.Id,
+        Name = savedRoom.Name,
+        CreatedAt = savedRoom.CreatedAt,
+        MemberCount = 0
+      };
+
+      // Broadcast new room creation to all connected SignalR clients
+      await _hubContext.Clients.All.SendAsync("RoomCreated", roomDto);
+
+      return CreatedAtAction(nameof(GetRooms), savedRoom);
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, "Failed to create room");
+    }
   }
 }
 

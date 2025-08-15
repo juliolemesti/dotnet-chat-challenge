@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
+using ChatChallenge.Api.Models;
 
 namespace ChatChallenge.Api.Hubs;
 
@@ -27,20 +28,35 @@ public class ChatHub : Hub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {
-      await Clients.Caller.SendAsync("Error", "Authentication required");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Authentication required",
+        Code = "AUTH_REQUIRED"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     if (string.IsNullOrWhiteSpace(message))
     {
-      await Clients.Caller.SendAsync("Error", "Message cannot be empty");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Message cannot be empty",
+        Code = "EMPTY_MESSAGE"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     // Parse roomId to integer
     if (!int.TryParse(roomId, out int roomIdInt))
     {
-      await Clients.Caller.SendAsync("Error", "Invalid room ID");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Invalid room ID",
+        Code = "INVALID_ROOM_ID"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
@@ -57,21 +73,28 @@ public class ChatHub : Hub
     {
       var savedMessage = await _chatRepository.AddMessageAsync(chatMessage);
       
-      // Broadcast the message to all clients in the room group
-      await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", new
+      // Create SignalR DTO for broadcasting
+      var messageDto = new SignalRMessageDto
       {
-        id = savedMessage.Id,
-        content = savedMessage.Content,
-        userName = savedMessage.UserName,
-        roomId = savedMessage.ChatRoomId,
-        createdAt = savedMessage.CreatedAt,
-        isStockBot = savedMessage.IsStockBot
-      });
+        Id = savedMessage.Id,
+        Content = savedMessage.Content,
+        UserName = savedMessage.UserName,
+        RoomId = savedMessage.ChatRoomId,
+        CreatedAt = savedMessage.CreatedAt,
+        IsStockBot = savedMessage.IsStockBot
+      };
+      
+      // Broadcast the message to all clients in the room group
+      await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
     }
     catch (Exception)
     {
-      await Clients.Caller.SendAsync("Error", "Failed to send message");
-      // TODO: Add proper logging in production
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Failed to send message",
+        Code = "SEND_MESSAGE_ERROR"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
     }
   }
 
@@ -84,14 +107,24 @@ public class ChatHub : Hub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {
-      await Clients.Caller.SendAsync("Error", "Authentication required");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Authentication required",
+        Code = "AUTH_REQUIRED"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     // Parse roomId to integer for validation
     if (!int.TryParse(roomId, out int roomIdInt))
     {
-      await Clients.Caller.SendAsync("Error", "Invalid room ID");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Invalid room ID",
+        Code = "INVALID_ROOM_ID"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
@@ -99,15 +132,27 @@ public class ChatHub : Hub
     var rooms = await _chatRepository.GetAllRoomsAsync();
     if (!rooms.Any(r => r.Id == roomIdInt))
     {
-      await Clients.Caller.SendAsync("Error", "Room not found");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Room not found",
+        Code = "ROOM_NOT_FOUND"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     // Join the room group
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     
+    // Create presence DTO for user joined notification
+    var presenceDto = new SignalRUserPresenceDto
+    {
+      UserName = userName,
+      RoomId = roomId
+    };
+    
     // Notify others in the room that user joined
-    await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserJoined", userName, roomId);
+    await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserJoined", presenceDto);
     
     // Confirm to the caller that they joined successfully
     await Clients.Caller.SendAsync("JoinedRoom", roomId);
@@ -122,15 +167,27 @@ public class ChatHub : Hub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {
-      await Clients.Caller.SendAsync("Error", "Authentication required");
+      var errorDto = new SignalRErrorDto
+      {
+        Message = "Authentication required",
+        Code = "AUTH_REQUIRED"
+      };
+      await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     // Remove from the room group
     await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     
+    // Create presence DTO for user left notification
+    var presenceDto = new SignalRUserPresenceDto
+    {
+      UserName = userName,
+      RoomId = roomId
+    };
+    
     // Notify others in the room that user left
-    await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserLeft", userName, roomId);
+    await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserLeft", presenceDto);
     
     // Confirm to the caller that they left successfully
     await Clients.Caller.SendAsync("LeftRoom", roomId);
@@ -144,7 +201,12 @@ public class ChatHub : Hub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (!string.IsNullOrEmpty(userName))
     {
-      await Clients.Caller.SendAsync("Connected", $"Welcome {userName}!");
+      var connectionDto = new SignalRConnectionDto
+      {
+        UserName = userName,
+        Message = $"Welcome {userName}!"
+      };
+      await Clients.Caller.SendAsync("Connected", connectionDto);
     }
     await base.OnConnectedAsync();
   }
