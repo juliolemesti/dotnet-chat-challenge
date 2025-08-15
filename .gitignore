@@ -1,0 +1,116 @@
+# .NET Backend
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.tmp
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/launchSettings.json
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+.dotnet/
+.tools/
+
+# Entity Framework
+*.edmx.diagram
+*.edmx.sql
+migrations/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# React Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnp
+.pnp.js
+coverage/
+build/
+dist/
+*.tgz
+*.tar.gz
+.cache/
+.parcel-cache/
+.nyc_output
+.eslintcache
+.stylelintcache
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+lerna-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE files
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# RabbitMQ data
+rabbitmq_data/
+
+# PostgreSQL data
