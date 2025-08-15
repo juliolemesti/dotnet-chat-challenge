@@ -6,6 +6,7 @@ using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
 using ChatChallenge.Api.Hubs;
 using ChatChallenge.Api.Models;
+using ChatChallenge.Api.Extensions;
 
 namespace ChatChallenge.Api.Controllers;
 
@@ -65,18 +66,8 @@ public class ChatController : ControllerBase
       // Save message to database
       var savedMessage = await _chatRepository.AddMessageAsync(message);
 
-      // Create SignalR DTO for broadcasting
-      var messageDto = new SignalRMessageDto
-      {
-        Id = savedMessage.Id,
-        Content = savedMessage.Content,
-        UserName = savedMessage.UserName,
-        RoomId = savedMessage.ChatRoomId,
-        CreatedAt = savedMessage.CreatedAt,
-        IsStockBot = savedMessage.IsStockBot
-      };
-
-      // Broadcast message to SignalR clients in the room
+      // Convert to SignalR DTO and broadcast to room
+      var messageDto = savedMessage.ToSignalRDto();
       await _hubContext.Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
 
       return CreatedAtAction(nameof(GetMessages), new { roomId }, savedMessage);
@@ -105,16 +96,8 @@ public class ChatController : ControllerBase
       // Save room to database
       var savedRoom = await _chatRepository.CreateRoomAsync(room);
 
-      // Create SignalR DTO for broadcasting
-      var roomDto = new SignalRRoomDto
-      {
-        Id = savedRoom.Id,
-        Name = savedRoom.Name,
-        CreatedAt = savedRoom.CreatedAt,
-        MemberCount = 0
-      };
-
-      // Broadcast new room creation to all connected SignalR clients
+      // Convert to SignalR DTO and broadcast to all clients
+      var roomDto = savedRoom.ToSignalRDto(memberCount: 0);
       await _hubContext.Clients.All.SendAsync("RoomCreated", roomDto);
 
       return CreatedAtAction(nameof(GetRooms), savedRoom);

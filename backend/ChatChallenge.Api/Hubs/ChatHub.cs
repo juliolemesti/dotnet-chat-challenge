@@ -4,6 +4,7 @@ using System.Security.Claims;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
 using ChatChallenge.Api.Models;
+using ChatChallenge.Api.Extensions;
 
 namespace ChatChallenge.Api.Hubs;
 
@@ -73,27 +74,13 @@ public class ChatHub : Hub
     {
       var savedMessage = await _chatRepository.AddMessageAsync(chatMessage);
       
-      // Create SignalR DTO for broadcasting
-      var messageDto = new SignalRMessageDto
-      {
-        Id = savedMessage.Id,
-        Content = savedMessage.Content,
-        UserName = savedMessage.UserName,
-        RoomId = savedMessage.ChatRoomId,
-        CreatedAt = savedMessage.CreatedAt,
-        IsStockBot = savedMessage.IsStockBot
-      };
-      
-      // Broadcast the message to all clients in the room group
+      // Convert to SignalR DTO and broadcast
+      var messageDto = savedMessage.ToSignalRDto();
       await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
     }
     catch (Exception)
     {
-      var errorDto = new SignalRErrorDto
-      {
-        Message = "Failed to send message",
-        Code = "SEND_MESSAGE_ERROR"
-      };
+      var errorDto = SignalRExtensions.CreateErrorDto("Failed to send message", "SEND_MESSAGE_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }
   }
