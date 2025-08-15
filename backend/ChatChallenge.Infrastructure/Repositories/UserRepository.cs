@@ -20,6 +20,12 @@ public class UserRepository : IUserRepository
       .FirstOrDefaultAsync(u => u.Email == email);
   }
 
+  public async Task<User?> GetUserByUserNameAsync(string userName)
+  {
+    return await _context.Users
+      .FirstOrDefaultAsync(u => u.UserName == userName);
+  }
+
   public async Task<User> CreateUserAsync(User user)
   {
     user.CreatedAt = DateTime.UtcNow;

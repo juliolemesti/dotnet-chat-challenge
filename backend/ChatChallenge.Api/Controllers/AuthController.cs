@@ -21,63 +21,72 @@ public class AuthController : ControllerBase
   [HttpPost("login")]
   public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
   {
-    // For demo purposes - simple authentication
-    var isValid = await _userRepository.ValidateUserCredentialsAsync(request.Email, request.Password);
+    // Simple validation - in production, use proper password hashing/verification
+    var user = await _userRepository.GetUserByEmailAsync(request.Email);
     
-    if (!isValid)
+    if (user == null)
     {
-      // Try to create user if doesn't exist (for demo)
-      var existingUser = await _userRepository.GetUserByEmailAsync(request.Email);
-      if (existingUser == null)
-      {
-        var newUser = new User
-        {
-          Email = request.Email,
-          UserName = request.Email.Split('@')[0] // Simple username from email
-        };
-        await _userRepository.CreateUserAsync(newUser);
-        isValid = true;
-      }
+      // User doesn't exist - return generic error message (don't specify if email or password is wrong)
+      return Unauthorized(new { message = "Invalid credentials" });
     }
 
-    if (!isValid)
+    // For demo purposes, assume password validation always passes if user exists
+    // In production, verify hashed password here
+    var isValidPassword = await _userRepository.ValidateUserCredentialsAsync(request.Email, request.Password);
+    
+    if (!isValidPassword)
     {
       return Unauthorized(new { message = "Invalid credentials" });
     }
 
-    var user = await _userRepository.GetUserByEmailAsync(request.Email);
-    
     return Ok(new LoginResponse
     {
       Success = true,
-      User = user!,
-      Token = _jwtService.GenerateToken(user!)
+      User = user,
+      Token = _jwtService.GenerateToken(user)
     });
   }
 
   [HttpPost("register")]
   public async Task<ActionResult<LoginResponse>> Register([FromBody] RegisterRequest request)
   {
-    var existingUser = await _userRepository.GetUserByEmailAsync(request.Email);
-    if (existingUser != null)
+    // Check if user already exists by email
+    var existingUserByEmail = await _userRepository.GetUserByEmailAsync(request.Email);
+    if (existingUserByEmail != null)
     {
       return BadRequest(new { message = "User already exists" });
     }
 
+    // Check if username is already taken
+    var existingUserByUserName = await _userRepository.GetUserByUserNameAsync(request.UserName);
+    if (existingUserByUserName != null)
+    {
+      return BadRequest(new { message = "User already exists" });
+    }
+
+    // Create new user
     var newUser = new User
     {
       Email = request.Email,
       UserName = request.UserName
     };
 
-    var savedUser = await _userRepository.CreateUserAsync(newUser);
-
-    return Ok(new LoginResponse
+    try
     {
-      Success = true,
-      User = savedUser,
-      Token = _jwtService.GenerateToken(savedUser)
-    });
+      var savedUser = await _userRepository.CreateUserAsync(newUser);
+
+      return Ok(new LoginResponse
+      {
+        Success = true,
+        User = savedUser,
+        Token = _jwtService.GenerateToken(savedUser)
+      });
+    }
+    catch (Exception)
+    {
+      // In case of any database error during user creation
+      return BadRequest(new { message = "Registration failed. Please try again." });
+    }
   }
 }
 
