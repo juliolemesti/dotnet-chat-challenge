@@ -1,26 +1,43 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { CssBaseline, ThemeProvider } from '@mui/material'
+import { Route, BrowserRouter as Router, Routes, Navigate } from "react-router-dom"
+import './App.css'
+import LoginPage from './pages/LoginPage'
+import ChatRoomPage from './pages/ChatRoomPage'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import { theme } from "./theme"
+
+const AppRoutes: React.FC = () => {
+  const { isAuthenticated } = useAuth()
+
+  return (
+    <Routes>
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to="/chat" replace /> : <LoginPage />
+      } />
+      <Route path="/chat" element={
+        <ProtectedRoute>
+          <ChatRoomPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/" element={
+        <Navigate to={isAuthenticated ? "/chat" : "/login"} replace />
+      } />
+    </Routes>
+  )
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
+  )
 }
 
-export default App;
+export default App
