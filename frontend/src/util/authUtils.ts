@@ -7,8 +7,8 @@ export const handleAuthenticationError = (): void => {
   // Clear invalid token from localStorage
   localStorage.removeItem('authToken')
   
-  // Redirect to login page
-  if (typeof window !== 'undefined') {
+  // Redirect to login page if not already there
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
     window.location.href = '/login'
   }
 }
