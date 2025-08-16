@@ -7,9 +7,13 @@ interface UseSignalRReturn {
   isConnected: boolean
   isConnecting: boolean
   error: string | null
+  hasReachedMaxRetries: boolean
   sendMessage: (roomId: number, message: string) => Promise<void>
   joinRoom: (roomId: number) => Promise<void>
   leaveRoom: (roomId: number) => Promise<void>
+  connect: () => Promise<void>
+  disconnect: () => Promise<void>
+  retryConnection: () => Promise<void>
   clearError: () => void
 }
 
@@ -28,6 +32,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasReachedMaxRetries, setHasReachedMaxRetries] = useState(false)
 
   const {
     onMessageReceived,
@@ -74,6 +79,12 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
         setIsConnected(false)
         setIsConnecting(false)
         // Redirect handled by service
+      },
+      onMaxRetriesReached: () => {
+        console.warn('SignalR max retries reached')
+        setHasReachedMaxRetries(true)
+        setIsConnecting(false)
+        setError('Connection failed after maximum retries. Click retry to try again.')
       }
     }
 
@@ -134,13 +145,59 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
     setError(null)
   }, [])
 
+  const connect = useCallback(async (): Promise<void> => {
+    try {
+      setIsConnecting(true)
+      setError(null)
+      setHasReachedMaxRetries(false)
+      await signalRService.startConnection()
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to connect'
+      setError(errorMessage)
+      setIsConnecting(false)
+      throw err
+    }
+  }, [])
+
+  const disconnect = useCallback(async (): Promise<void> => {
+    try {
+      setError(null)
+      await signalRService.stopConnection()
+      setIsConnected(false)
+      setIsConnecting(false)
+      setHasReachedMaxRetries(false)
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to disconnect'
+      setError(errorMessage)
+      throw err
+    }
+  }, [])
+
+  const retryConnection = useCallback(async (): Promise<void> => {
+    try {
+      setIsConnecting(true)
+      setError(null)
+      setHasReachedMaxRetries(false)
+      await signalRService.retryConnection()
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to retry connection'
+      setError(errorMessage)
+      setIsConnecting(false)
+      throw err
+    }
+  }, [])
+
   return {
     isConnected,
     isConnecting,
     error,
+    hasReachedMaxRetries,
     sendMessage,
     joinRoom,
     leaveRoom,
+    connect,
+    disconnect,
+    retryConnection,
     clearError
   }
 }

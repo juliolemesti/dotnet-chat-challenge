@@ -21,14 +21,17 @@ export interface SignalRCallbacks {
   onLeftRoom?: (roomId: string) => void
   onError?: (error: SignalRErrorDto) => void
   onAuthenticationFailed?: () => void
+  onMaxRetriesReached?: () => void
 }
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null
   private callbacks: SignalRCallbacks = {}
   private reconnectAttempts = 0
-  private maxReconnectAttempts = 5
+  private maxReconnectAttempts = 3 // Reduced from 5 to 3
   private reconnectDelay = 3000
+  private hasReachedMaxRetries = false
+  private userInitiatedReconnect = false
 
   constructor() {
     this.setupConnection()
@@ -64,10 +67,18 @@ class SignalRService {
             return null
           }
           
-          if (retryContext.previousRetryCount < this.maxReconnectAttempts) {
+          if (retryContext.previousRetryCount < this.maxReconnectAttempts && !this.hasReachedMaxRetries) {
             return this.reconnectDelay
           }
-          return null // Stop retrying
+          
+          // Max retries reached for automatic reconnection
+          if (!this.hasReachedMaxRetries) {
+            this.hasReachedMaxRetries = true
+            console.warn(`Max retry attempts (${this.maxReconnectAttempts}) reached. Manual reconnection required.`)
+            this.callbacks.onMaxRetriesReached?.()
+          }
+          
+          return null // Stop automatic retrying
         }
       })
       .configureLogging(signalR.LogLevel.Information)
@@ -97,6 +108,8 @@ class SignalRService {
     this.connection.onreconnected(() => {
       console.log('SignalR reconnected')
       this.reconnectAttempts = 0
+      this.hasReachedMaxRetries = false
+      this.userInitiatedReconnect = false
     })
 
     this.connection.onreconnecting((error) => {
@@ -174,6 +187,8 @@ class SignalRService {
         await this.connection.start()
         console.log('SignalR connection started')
         this.reconnectAttempts = 0
+        this.hasReachedMaxRetries = false
+        this.userInitiatedReconnect = false
       } catch (error: any) {
         console.error('SignalR connection failed:', error)
         
@@ -188,6 +203,22 @@ class SignalRService {
         throw error
       }
     }
+  }
+
+  async retryConnection(): Promise<void> {
+    console.log('User initiated reconnection attempt')
+    this.userInitiatedReconnect = true
+    this.hasReachedMaxRetries = false
+    this.reconnectAttempts = 0
+    
+    // Stop existing connection if any
+    if (this.connection && this.connection.state !== signalR.HubConnectionState.Disconnected) {
+      await this.stopConnection()
+    }
+    
+    // Setup new connection and start
+    this.setupConnection()
+    await this.startConnection()
   }
 
   async stopConnection(): Promise<void> {
@@ -278,6 +309,18 @@ class SignalRService {
 
   isConnected(): boolean {
     return this.connection?.state === signalR.HubConnectionState.Connected
+  }
+
+  hasReachedMaxReconnectAttempts(): boolean {
+    return this.hasReachedMaxRetries
+  }
+
+  getReconnectAttempts(): number {
+    return this.reconnectAttempts
+  }
+
+  getMaxReconnectAttempts(): number {
+    return this.maxReconnectAttempts
   }
 
   // Utility method to convert SignalR DTO to ChatMessage

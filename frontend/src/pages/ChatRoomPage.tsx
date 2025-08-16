@@ -9,10 +9,14 @@ import {
   Drawer,
   useMediaQuery,
   useTheme,
+  Tooltip,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
   ArrowBack as ArrowBackIcon,
+  Wifi as WifiIcon,
+  WifiOff as WifiOffIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -41,11 +45,18 @@ const ChatRoomPage: React.FC = () => {
     
     // SignalR state
     isConnected,
+    isConnecting,
+    hasReachedMaxRetries,
     
     // Actions
     selectRoom,
     createRoom,
     sendMessage,
+    
+    // Connection management
+    connect,
+    disconnect,
+    retryConnection,
   } = useChat()
 
   // Find selected room object from ID
@@ -76,6 +87,50 @@ const ChatRoomPage: React.FC = () => {
     setMobileDrawerOpen(!mobileDrawerOpen)
   }
 
+  const handleConnectionToggle = async () => {
+    try {
+      if (isConnected) {
+        await disconnect()
+      } else if (hasReachedMaxRetries) {
+        await retryConnection()
+      } else {
+        await connect()
+      }
+    } catch (error) {
+      console.error('Connection toggle failed:', error)
+    }
+  }
+
+  const getConnectionButtonProps = () => {
+    if (isConnecting) {
+      return {
+        icon: <RefreshIcon sx={{ animation: 'spin 1s linear infinite', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} />,
+        tooltip: 'Connecting...',
+        disabled: true
+      }
+    } else if (isConnected) {
+      return {
+        icon: <WifiOffIcon />,
+        tooltip: 'Disconnect from chat',
+        disabled: false
+      }
+    } else if (hasReachedMaxRetries) {
+      return {
+        icon: <RefreshIcon />,
+        tooltip: 'Retry connection',
+        disabled: false
+      }
+    } else {
+      return {
+        icon: <WifiIcon />,
+        tooltip: 'Connect to chat',
+        disabled: false
+      }
+    }
+  }
+
+  const connectionButtonProps = getConnectionButtonProps()
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Top Navigation Bar */}
@@ -97,6 +152,18 @@ const ChatRoomPage: React.FC = () => {
             {isMobile && selectedRoom ? selectedRoom.name : 'Chat Challenge'}
           </Typography>
           
+          {/* Connection Toggle Button */}
+          <Tooltip title={connectionButtonProps.tooltip}>
+            <IconButton
+              color="inherit"
+              onClick={handleConnectionToggle}
+              disabled={connectionButtonProps.disabled}
+              sx={{ mr: 1 }}
+            >
+              {connectionButtonProps.icon}
+            </IconButton>
+          </Tooltip>
+          
           {/* Connection Status Indicator */}
           <Box
             sx={{
@@ -107,7 +174,7 @@ const ChatRoomPage: React.FC = () => {
               px: 1,
               py: 0.5,
               borderRadius: 1,
-              bgcolor: isConnected ? 'success.dark' : 'error.dark',
+              bgcolor: isConnected ? 'success.dark' : isConnecting ? 'warning.dark' : 'error.dark',
               color: 'white'
             }}
           >
@@ -116,17 +183,21 @@ const ChatRoomPage: React.FC = () => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                bgcolor: isConnected ? 'success.light' : 'error.light',
-                animation: isConnected ? 'pulse 2s infinite' : 'none',
+                bgcolor: isConnected ? 'success.light' : isConnecting ? 'warning.light' : 'error.light',
+                animation: isConnected ? 'pulse 2s infinite' : isConnecting ? 'spin 1s linear infinite' : 'none',
                 '@keyframes pulse': {
                   '0%': { opacity: 1 },
                   '50%': { opacity: 0.5 },
                   '100%': { opacity: 1 }
+                },
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' }
                 }
               }}
             />
             <Typography variant="caption" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              {isConnected ? 'Connected' : 'Disconnected'}
+              {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : hasReachedMaxRetries ? 'Retry Required' : 'Disconnected'}
             </Typography>
           </Box>
           
@@ -221,7 +292,7 @@ const ChatRoomPage: React.FC = () => {
                 >
                   <Typography variant="h6">{selectedRoom.name}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Connection: {isConnected ? 'Connected' : 'Disconnected'}
+                    Connection: {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : hasReachedMaxRetries ? 'Retry Required' : 'Disconnected'}
                   </Typography>
                 </Box>
               )}

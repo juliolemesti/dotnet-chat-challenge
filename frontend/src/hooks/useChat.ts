@@ -9,6 +9,7 @@ interface UseChatReturn {
   isConnected: boolean
   isConnecting: boolean
   connectionError: string | null
+  hasReachedMaxRetries: boolean
   
   // Rooms state
   rooms: ReturnType<typeof useChatRooms>['rooms']
@@ -30,6 +31,11 @@ interface UseChatReturn {
   leaveRoom: (roomId: number) => Promise<void>
   refreshRooms: () => Promise<void>
   refreshMessages: () => Promise<void>
+  
+  // Connection management
+  connect: () => Promise<void>
+  disconnect: () => Promise<void>
+  retryConnection: () => Promise<void>
   
   // Error handling
   clearAllErrors: () => void
@@ -66,8 +72,12 @@ export const useChat = (): UseChatReturn => {
     isConnected,
     isConnecting,
     error: connectionError,
+    hasReachedMaxRetries,
     joinRoom: joinRoomAction,
     leaveRoom: leaveRoomAction,
+    connect,
+    disconnect,
+    retryConnection,
     clearError: clearConnectionError
   } = useSignalR({
     onMessageReceived: handleMessageReceived,
@@ -148,6 +158,7 @@ export const useChat = (): UseChatReturn => {
     isConnected,
     isConnecting,
     connectionError,
+    hasReachedMaxRetries,
     
     // Rooms state
     rooms,
@@ -169,6 +180,11 @@ export const useChat = (): UseChatReturn => {
     leaveRoom,
     refreshRooms,
     refreshMessages,
+    
+    // Connection management
+    connect,
+    disconnect,
+    retryConnection,
     
     // Error handling
     clearAllErrors
