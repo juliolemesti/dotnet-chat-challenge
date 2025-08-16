@@ -81,8 +81,7 @@ export const useChat = (): UseChatReturn => {
     clearError: clearConnectionError
   } = useSignalR({
     onMessageReceived: handleMessageReceived,
-    onRoomCreated: handleRoomCreatedFromSignalR,
-    autoConnect: true
+    onRoomCreated: handleRoomCreatedFromSignalR
   })
 
   // Enhanced room selection with automatic SignalR room joining

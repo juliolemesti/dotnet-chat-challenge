@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import signalRService from '../services/signalRService'
 import { SignalRCallbacks } from '../services/signalRService'
 import { SignalRMessageDto, SignalRRoomDto, SignalRUserPresenceDto, SignalRErrorDto } from '../types/signalr'
@@ -34,8 +34,8 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasReachedMaxRetries, setHasReachedMaxRetries] = useState(false)
-  const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false)
-  const { isAuthenticated, token, isLoading } = useAuth()
+  const hasAttemptedAutoConnectRef = useRef(false)
+  const { isAuthenticated } = useAuth()
 
   const {
     onMessageReceived,
@@ -95,26 +95,25 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
     signalRService.setCallbacks(callbacks)
   }, [onMessageReceived, onUserJoined, onUserLeft, onRoomCreated, onJoinedRoom, onLeftRoom, onError])
 
-  // Auto-connect when authenticated and auto-connect is enabled
+  // Auto-connect only once when auth is ready and user is authenticated
   useEffect(() => {
-    if (autoConnect && !isLoading && !hasAttemptedAutoConnect && !isConnected && !isConnecting && isAuthenticated && token) {
-      console.log('Attempting auto-connect...')
-      setHasAttemptedAutoConnect(true)
-      setIsConnecting(true)
-      signalRService.startConnection().catch((err) => {
-        console.error('Failed to start SignalR connection:', err)
-        setError(err.message || 'Failed to connect')
-        setIsConnecting(false)
-      })
-    }
-  }, [autoConnect, isLoading, hasAttemptedAutoConnect, isConnected, isConnecting, isAuthenticated, token])
+    if (!autoConnect || !isAuthenticated || hasAttemptedAutoConnectRef.current || isConnected || isConnecting) return
+
+    console.log('auto connect effect executed', isAuthenticated, autoConnect, !hasAttemptedAutoConnectRef.current, !isConnected, !isConnecting)
+    hasAttemptedAutoConnectRef.current = true
+    signalRService.startConnection().catch((err) => {
+      console.error("Failed to start SignalR connection:", err)
+      setError(err.message || "Failed to connect")
+      setIsConnecting(false)
+    })
+  }, [isAuthenticated, autoConnect, isConnected, isConnecting])
 
   // Disconnect when user logs out
   useEffect(() => {
     if (!isAuthenticated && isConnected) {
       console.log('User logged out, disconnecting SignalR...')
       signalRService.stopConnection().catch(console.error)
-      setHasAttemptedAutoConnect(false) // Reset so it can auto-connect again when user logs back in
+      hasAttemptedAutoConnectRef.current = false
     }
   }, [isAuthenticated, isConnected])
 
@@ -195,7 +194,6 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
       setIsConnecting(true)
       setError(null)
       setHasReachedMaxRetries(false)
-      setHasAttemptedAutoConnect(true)
       await signalRService.retryConnection()
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to retry connection'

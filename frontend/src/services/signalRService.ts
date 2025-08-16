@@ -190,11 +190,36 @@ class SignalRService {
       this.setupConnection()
     }
 
-    // Only start if completely disconnected
-    if (this.connection?.state === signalR.HubConnectionState.Disconnected) {
+    // Check if connection is in a state that allows starting
+    const currentState = this.connection?.state
+    if (currentState === signalR.HubConnectionState.Connected) {
+      console.log('SignalR already connected')
+      return
+    }
+    
+    if (currentState === signalR.HubConnectionState.Connecting) {
+      console.log('SignalR connection already in progress')
+      return
+    }
+    
+    if (currentState === signalR.HubConnectionState.Reconnecting) {
+      console.log('SignalR already reconnecting')
+      return
+    }
+
+    // Only start if completely disconnected or disconnecting
+    if (currentState === signalR.HubConnectionState.Disconnected || 
+        currentState === signalR.HubConnectionState.Disconnecting) {
+      
+      // If disconnecting, wait a moment before attempting to start
+      if (currentState === signalR.HubConnectionState.Disconnecting) {
+        console.log('Connection is disconnecting, waiting before restart...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      
       try {
         console.log('Starting SignalR connection...')
-        await this.connection.start()
+        await this.connection!.start()
         console.log('SignalR connection started successfully')
         this.reconnectAttempts = 0
         this.hasReachedMaxRetries = false
@@ -213,7 +238,7 @@ class SignalRService {
         throw error
       }
     } else {
-      console.log(`Connection already in state: ${this.connection?.state}`)
+      console.log(`Connection in unexpected state: ${currentState}`)
     }
   }
 
