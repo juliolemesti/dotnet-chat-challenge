@@ -34,6 +34,9 @@ builder.Services.AddScoped<IStockBotService, StockBotService>();
 // Register Stock API service with HttpClient
 builder.Services.AddHttpClient<IStockApiService, StockApiService>();
 
+// Register Message Broker service (in-memory implementation)
+builder.Services.AddSingleton<IMessageBrokerService, InMemoryMessageBrokerService>();
+
 // Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is not configured");
