@@ -30,13 +30,6 @@ const InputContainer = styled(Paper)(({ theme }) => ({
   }
 }))
 
-const InputWrapper = styled(Box)(({ theme }) => ({
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(0.5)
-}))
-
 const StatusChip = styled(Chip, {
   shouldForwardProp: (prop) => prop !== 'connected'
 })<{ connected: boolean }>(({ theme, connected }) => ({
@@ -84,17 +77,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <InputContainer elevation={2}>
-      <InputWrapper>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <StatusChip
-            connected={isConnected}
-            size="small"
-            icon={isConnected ? undefined : <DisconnectedIcon />}
-            label={isConnected ? 'Connected' : 'Disconnected'}
-            variant="filled"
-          />
-        </Box>
-        
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+        <StatusChip
+          connected={isConnected}
+          size="small"
+          icon={isConnected ? undefined : <DisconnectedIcon />}
+          label={isConnected ? 'Connected' : 'Disconnected'}
+          variant="filled"
+        />
+      </Box>
+      
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
         <StyledTextField
           fullWidth
           multiline
@@ -117,31 +110,32 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             sx: { fontSize: '0.7rem', mx: 0 }
           }}
         />
-      </InputWrapper>
 
-      <Tooltip title={isDisabled ? "Cannot send message" : "Send message"}>
-        <span>
-          <IconButton
-            color="primary"
-            onClick={handleSend}
-            disabled={isDisabled || !value.trim()}
-            size="large"
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              },
-              '&.Mui-disabled': {
-                bgcolor: 'action.disabledBackground',
-                color: 'action.disabled'
-              }
-            }}
-          >
-            <SendIcon />
-          </IconButton>
-        </span>
-      </Tooltip>
+        <Tooltip title={isDisabled ? "Cannot send message" : "Send message"}>
+          <span>
+            <IconButton
+              color="primary"
+              onClick={handleSend}
+              disabled={isDisabled || !value.trim()}
+              size="large"
+              sx={{
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                mb: 2.5, // Align with text field baseline, accounting for helper text
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                },
+                '&.Mui-disabled': {
+                  bgcolor: 'action.disabledBackground',
+                  color: 'action.disabled'
+                }
+              }}
+            >
+              <SendIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
     </InputContainer>
   )
 }
