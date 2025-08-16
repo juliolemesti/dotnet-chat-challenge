@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import signalRService from '../services/signalRService'
 import { SignalRCallbacks } from '../services/signalRService'
 import { SignalRMessageDto, SignalRRoomDto, SignalRUserPresenceDto, SignalRErrorDto } from '../types/signalr'
@@ -34,6 +34,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const [error, setError] = useState<string | null>(null)
   const [hasReachedMaxRetries, setHasReachedMaxRetries] = useState(false)
   const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false)
+  const hasInitialized = useRef(false)
 
   const {
     onMessageReceived,
@@ -95,8 +96,9 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
 
   // Auto-connect on mount - only once
   useEffect(() => {
-    if (autoConnect && !hasAttemptedAutoConnect && !isConnected && !isConnecting) {
+    if (autoConnect && !hasInitialized.current && !hasAttemptedAutoConnect && !isConnected && !isConnecting) {
       console.log('Attempting auto-connect...')
+      hasInitialized.current = true
       setHasAttemptedAutoConnect(true)
       setIsConnecting(true)
       signalRService.startConnection().catch((err) => {
