@@ -159,9 +159,12 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const joinRoom = useCallback(async (roomId: number): Promise<void> => {
     try {
       setError(null)
+      console.log('🏠 Attempting to join SignalR room:', roomId)
       await signalRService.joinRoom(roomId)
+      console.log('🏠 Successfully joined SignalR room:', roomId)
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to join room'
+      console.error('🏠 Failed to join SignalR room:', roomId, err)
       setError(errorMessage)
       throw err
     }

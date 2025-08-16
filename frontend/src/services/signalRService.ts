@@ -132,7 +132,7 @@ class SignalRService {
     })
 
     this.connection.on('ReceiveMessage', (message: SignalRMessageDto) => {
-      console.log('Message received:', message)
+      console.log('🔔 Message received in SignalR service:', message)
       this.callbacks.onMessageReceived?.(message)
     })
 

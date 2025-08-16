@@ -98,14 +98,17 @@ export const useChatMessages = (options: UseChatMessagesOptions): UseChatMessage
     try {
       setIsSending(true)
       setError(null)
+      console.log('📤 Sending message via SignalR to room:', roomId, 'content:', content)
       
       // Import signalRService dynamically to avoid circular dependencies
       const signalRService = (await import('../services/signalRService')).default
       await signalRService.sendMessage(roomId, content.trim())
+      console.log('📤 Message sent successfully via SignalR')
       
       // Don't add message to local state here - wait for SignalR to broadcast it back
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to send message via SignalR'
+      console.error('📤 Failed to send message via SignalR:', err)
       setError(errorMessage)
       throw err
     } finally {
@@ -114,23 +117,32 @@ export const useChatMessages = (options: UseChatMessagesOptions): UseChatMessage
   }, [roomId])
 
   const handleMessageReceived = useCallback((messageDto: SignalRMessageDto): void => {
+    console.log('📨 Message received via SignalR:', messageDto)
+    console.log('📨 Current roomId:', roomId)
+    console.log('📨 Message roomId:', messageDto.roomId)
+    console.log('📨 Room ID match:', messageDto.roomId === roomId)
+    
     // Only add messages for the current room
     if (!roomId || messageDto.roomId !== roomId) {
+      console.log('📨 Message filtered out - room ID mismatch or no current room')
       return
     }
 
     const newMessage: ChatMessage = SignalRService.signalRMessageToChatMessage(messageDto)
+    console.log('📨 Converting to ChatMessage:', newMessage)
     
     setMessages(prev => {
       // Check if message already exists to avoid duplicates
       const exists = prev.some(msg => msg.id === newMessage.id)
-      if (exists) return prev
+      if (exists) {
+        console.log('📨 Message already exists, skipping')
+        return prev
+      }
       
-      // Add new message and maintain maxMessages limit
-      const updatedMessages = [...prev, newMessage]
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        .slice(-maxMessages)
+      // Add new message to the end (bottom of chat) and maintain maxMessages limit
+      const updatedMessages = [...prev, newMessage].slice(-maxMessages)
       
+      console.log('📨 Updated messages array:', updatedMessages)
       return updatedMessages
     })
   }, [roomId, maxMessages])
