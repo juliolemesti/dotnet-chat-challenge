@@ -1,17 +1,16 @@
-import React from 'react'
+import {
+  Send as SendIcon
+} from '@mui/icons-material'
 import {
   Box,
-  TextField,
+  Chip,
   IconButton,
   Paper,
-  Chip,
+  TextField,
   Tooltip
 } from '@mui/material'
-import {
-  Send as SendIcon,
-  ConnectWithoutContact as DisconnectedIcon
-} from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
+import React from 'react'
 import { useMessageInput } from '../hooks'
 
 interface MessageInputProps {
@@ -77,16 +76,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <InputContainer elevation={2}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-        <StatusChip
-          connected={isConnected}
-          size="small"
-          icon={isConnected ? undefined : <DisconnectedIcon />}
-          label={isConnected ? 'Connected' : 'Disconnected'}
-          variant="filled"
-        />
-      </Box>
-      
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
         <StyledTextField
           fullWidth
