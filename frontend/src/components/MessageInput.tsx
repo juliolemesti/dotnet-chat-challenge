@@ -22,12 +22,12 @@ interface MessageInputProps {
 }
 
 const InputContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(1.5),
-  display: 'flex',
-  alignItems: 'flex-end',
-  gap: theme.spacing(1),
+  padding: theme.spacing(1, 2),
   backgroundColor: theme.palette.background.paper,
-  borderTop: `1px solid ${theme.palette.divider}`
+  borderTop: `1px solid ${theme.palette.divider}`,
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1),
+  }
 }))
 
 const InputWrapper = styled(Box)(({ theme }) => ({
@@ -56,6 +56,12 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper
+    }
+  },
+  [theme.breakpoints.down('sm')]: {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: theme.spacing(2),
+      fontSize: '1rem'
     }
   }
 }))

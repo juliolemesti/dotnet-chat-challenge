@@ -2,13 +2,13 @@ import React, { useEffect, useRef } from 'react'
 import {
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Paper
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { ChatMessage } from '../types'
 import { MessageItem } from './MessageItem'
+import { MessageSkeleton } from './MessageSkeleton'
 import { useAuth } from '../contexts/AuthContext'
 
 interface MessageListProps {
@@ -40,6 +40,10 @@ const MessagesContainer = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   gap: theme.spacing(0.5),
   maxHeight: 'calc(100vh - 280px)', // Adjust based on header and input heights
+  [theme.breakpoints.down('sm')]: {
+    maxHeight: 'calc(100vh - 120px)', // Reduced for mobile
+    padding: theme.spacing(0.5)
+  },
   '&::-webkit-scrollbar': {
     width: '8px'
   },
@@ -53,14 +57,6 @@ const MessagesContainer = styled(Box)(({ theme }) => ({
   '&::-webkit-scrollbar-thumb:hover': {
     background: theme.palette.action.selected
   }
-}))
-
-const LoadingContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: theme.spacing(4),
-  flex: 1
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -124,12 +120,11 @@ export const MessageList: React.FC<MessageListProps> = ({
 
       <MessagesContainer>
         {isLoading ? (
-          <LoadingContainer>
-            <CircularProgress size={32} />
-            <Typography variant="body2" sx={{ ml: 2 }}>
-              Loading messages...
-            </Typography>
-          </LoadingContainer>
+          <>
+            <MessageSkeleton count={3} />
+            <MessageSkeleton isCurrentUser count={2} />
+            <MessageSkeleton count={1} />
+          </>
         ) : messages.length === 0 ? (
           <EmptyState>
             <Typography variant="h6" gutterBottom>

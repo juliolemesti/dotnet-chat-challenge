@@ -14,11 +14,9 @@ interface MessageItemProps {
   isCurrentUser?: boolean
 }
 
-const MessageContainer = styled(Paper)<{ isCurrentUser?: boolean }>(({ theme, isCurrentUser }) => ({
-  padding: theme.spacing(1.5, 2),
-  marginBottom: theme.spacing(1),
+const MessageBubble = styled(Paper)<{ isCurrentUser: boolean }>(({ theme, isCurrentUser }) => ({
+  padding: theme.spacing(1, 1.5),
   maxWidth: '70%',
-  alignSelf: isCurrentUser ? 'flex-end' : 'flex-start',
   backgroundColor: isCurrentUser 
     ? theme.palette.primary.main 
     : theme.palette.background.paper,
@@ -26,9 +24,13 @@ const MessageContainer = styled(Paper)<{ isCurrentUser?: boolean }>(({ theme, is
     ? theme.palette.primary.contrastText 
     : theme.palette.text.primary,
   borderRadius: isCurrentUser 
-    ? '18px 18px 4px 18px' 
+    ? '18px 4px 18px 18px'
     : '18px 18px 18px 4px',
-  boxShadow: theme.shadows[1]
+  boxShadow: theme.shadows[1],
+  [theme.breakpoints.down('sm')]: {
+    maxWidth: '85%',
+    padding: theme.spacing(0.75, 1.25)
+  }
 }))
 
 const UserInfo = styled(Box)(({ theme }) => ({
@@ -73,7 +75,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isCurrentUser
         mb: 1
       }}
     >
-      <MessageContainer isCurrentUser={isCurrentUser} elevation={1}>
+      <MessageBubble isCurrentUser={isCurrentUser} elevation={1}>
         {!isCurrentUser && (
           <UserInfo>
             <Avatar
@@ -108,7 +110,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isCurrentUser
         <TimeStamp variant="caption">
           {formatTime(message.createdAt)}
         </TimeStamp>
-      </MessageContainer>
+      </MessageBubble>
     </Box>
   )
 }
