@@ -60,6 +60,8 @@ class SignalRService {
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
+          console.log(`SignalR retry attempt ${retryContext.previousRetryCount + 1}/${this.maxReconnectAttempts}`)
+          
           // Don't retry if it's an authentication error
           if (isAuthenticationError(retryContext.retryReason)) {
             console.warn('Authentication error - stopping reconnect attempts')
@@ -67,16 +69,23 @@ class SignalRService {
             return null
           }
           
-          if (retryContext.previousRetryCount < this.maxReconnectAttempts && !this.hasReachedMaxRetries) {
+          // Don't retry if we've already reached max retries
+          if (this.hasReachedMaxRetries) {
+            console.warn('Max retries already reached - no automatic retry')
+            return null
+          }
+          
+          if (retryContext.previousRetryCount < this.maxReconnectAttempts) {
+            console.log(`Retrying connection in ${this.reconnectDelay}ms...`)
             return this.reconnectDelay
           }
           
           // Max retries reached for automatic reconnection
-          if (!this.hasReachedMaxRetries) {
-            this.hasReachedMaxRetries = true
-            console.warn(`Max retry attempts (${this.maxReconnectAttempts}) reached. Manual reconnection required.`)
+          console.warn(`Max retry attempts (${this.maxReconnectAttempts}) reached. Manual reconnection required.`)
+          this.hasReachedMaxRetries = true
+          setTimeout(() => {
             this.callbacks.onMaxRetriesReached?.()
-          }
+          }, 100) // Small delay to ensure state is updated
           
           return null // Stop automatic retrying
         }
@@ -106,14 +115,14 @@ class SignalRService {
     })
 
     this.connection.onreconnected(() => {
-      console.log('SignalR reconnected')
+      console.log('SignalR reconnected successfully')
       this.reconnectAttempts = 0
       this.hasReachedMaxRetries = false
       this.userInitiatedReconnect = false
     })
 
     this.connection.onreconnecting((error) => {
-      console.log('SignalR reconnecting...', error)
+      console.log(`SignalR reconnecting... (attempt ${this.reconnectAttempts + 1})`, error)
       this.reconnectAttempts++
     })
 
@@ -211,14 +220,28 @@ class SignalRService {
     this.hasReachedMaxRetries = false
     this.reconnectAttempts = 0
     
-    // Stop existing connection if any
-    if (this.connection && this.connection.state !== signalR.HubConnectionState.Disconnected) {
-      await this.stopConnection()
+    try {
+      // Stop existing connection if any
+      if (this.connection && this.connection.state !== signalR.HubConnectionState.Disconnected) {
+        console.log('Stopping existing connection before retry...')
+        await this.connection.stop()
+      }
+      
+      // Setup fresh connection and start
+      console.log('Setting up fresh connection for retry...')
+      this.setupConnection()
+      
+      if (this.connection) {
+        await this.connection.start()
+        console.log('Retry connection successful')
+      } else {
+        throw new Error('Failed to create connection instance')
+      }
+    } catch (error: any) {
+      console.error('Retry connection failed:', error)
+      this.userInitiatedReconnect = false
+      throw error
     }
-    
-    // Setup new connection and start
-    this.setupConnection()
-    await this.startConnection()
   }
 
   async stopConnection(): Promise<void> {

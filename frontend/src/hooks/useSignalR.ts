@@ -33,6 +33,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasReachedMaxRetries, setHasReachedMaxRetries] = useState(false)
+  const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false)
 
   const {
     onMessageReceived,
@@ -53,6 +54,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
         setIsConnected(true)
         setIsConnecting(false)
         setError(null)
+        setHasReachedMaxRetries(false)
       },
       onDisconnected: (err) => {
         console.log('SignalR disconnected')
@@ -91,9 +93,11 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
     signalRService.setCallbacks(callbacks)
   }, [onMessageReceived, onUserJoined, onUserLeft, onRoomCreated, onJoinedRoom, onLeftRoom, onError])
 
-  // Auto-connect on mount
+  // Auto-connect on mount - only once
   useEffect(() => {
-    if (autoConnect && !isConnected && !isConnecting) {
+    if (autoConnect && !hasAttemptedAutoConnect && !isConnected && !isConnecting) {
+      console.log('Attempting auto-connect...')
+      setHasAttemptedAutoConnect(true)
       setIsConnecting(true)
       signalRService.startConnection().catch((err) => {
         console.error('Failed to start SignalR connection:', err)
@@ -106,7 +110,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
     return () => {
       signalRService.stopConnection().catch(console.error)
     }
-  }, [autoConnect, isConnected, isConnecting])
+  }, []) // Empty dependency array to run only once
 
   const sendMessage = useCallback(async (roomId: number, message: string): Promise<void> => {
     try {
@@ -150,6 +154,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
       setIsConnecting(true)
       setError(null)
       setHasReachedMaxRetries(false)
+      setHasAttemptedAutoConnect(true)
       await signalRService.startConnection()
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to connect'
@@ -178,6 +183,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
       setIsConnecting(true)
       setError(null)
       setHasReachedMaxRetries(false)
+      setHasAttemptedAutoConnect(true)
       await signalRService.retryConnection()
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to retry connection'
