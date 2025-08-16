@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useSignalR } from './useSignalR'
 import { useChatRooms } from './useChatRooms'
 import { useChatMessages } from './useChatMessages'
@@ -83,6 +83,44 @@ export const useChat = (): UseChatReturn => {
     onMessageReceived: handleMessageReceived,
     onRoomCreated: handleRoomCreatedFromSignalR
   })
+
+  // Auto-join SignalR room when selectedRoomId changes and SignalR is connected
+  // Also handle leaving previous rooms
+  const previousRoomIdRef = useRef<number | null>(null)
+  
+  useEffect(() => {
+    const handleRoomChange = async () => {
+      if (!isConnected) return
+
+      const prevRoomId = previousRoomIdRef.current
+      const currentRoomId = selectedRoomId
+
+      // Leave previous room if it exists and is different from current
+      if (prevRoomId && prevRoomId !== currentRoomId) {
+        console.log('🔄 Leaving previous SignalR room:', prevRoomId)
+        try {
+          await leaveRoomAction(prevRoomId)
+        } catch (error) {
+          console.error('🔄 Failed to leave previous SignalR room:', error)
+        }
+      }
+
+      // Join current room if it exists
+      if (currentRoomId) {
+        console.log('🔄 Auto-joining SignalR room:', currentRoomId)
+        try {
+          await joinRoomAction(currentRoomId)
+        } catch (error) {
+          console.error('🔄 Failed to auto-join SignalR room:', error)
+        }
+      }
+
+      // Update previous room reference
+      previousRoomIdRef.current = currentRoomId
+    }
+
+    handleRoomChange()
+  }, [isConnected, selectedRoomId, joinRoomAction, leaveRoomAction])
 
   // Enhanced room selection with automatic SignalR room joining
   const selectRoom = useCallback(async (roomId: number | null): Promise<void> => {
