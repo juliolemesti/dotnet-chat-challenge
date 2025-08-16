@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import * as signalR from '@microsoft/signalr'
 import signalRService from '../services/signalRService'
 import { SignalRCallbacks } from '../services/signalRService'
 import { SignalRMessageDto, SignalRRoomDto, SignalRUserPresenceDto, SignalRErrorDto } from '../types/signalr'
@@ -97,16 +98,32 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
 
   // Auto-connect only once when auth is ready and user is authenticated
   useEffect(() => {
-    if (!autoConnect || !isAuthenticated || hasAttemptedAutoConnectRef.current || isConnected || isConnecting) return
+    if (!autoConnect || !isAuthenticated || hasAttemptedAutoConnectRef.current) return
 
-    console.log('auto connect effect executed', isAuthenticated, autoConnect, !hasAttemptedAutoConnectRef.current, !isConnected, !isConnecting)
+    // Check if connection is already connected or connecting
+    const connectionState = signalRService.getConnectionState()
+    console.log('Current SignalR connection state:', connectionState, signalR.HubConnectionState[connectionState])
+    
+    if (connectionState === signalR.HubConnectionState.Connected || 
+        connectionState === signalR.HubConnectionState.Connecting || 
+        connectionState === signalR.HubConnectionState.Reconnecting) {
+      console.log('SignalR already connected/connecting, skipping auto-connect')
+      return
+    }
+
+    console.log('auto connect effect executed', isAuthenticated, autoConnect, !hasAttemptedAutoConnectRef.current)
     hasAttemptedAutoConnectRef.current = true
+    setIsConnecting(true)
+    
+    console.log('Starting SignalR connection immediately...')
+    // Start connection immediately instead of using timeout
     signalRService.startConnection().catch((err) => {
       console.error("Failed to start SignalR connection:", err)
       setError(err.message || "Failed to connect")
       setIsConnecting(false)
+      hasAttemptedAutoConnectRef.current = false
     })
-  }, [isAuthenticated, autoConnect, isConnected, isConnecting])
+  }, [isAuthenticated, autoConnect])
 
   // Disconnect when user logs out
   useEffect(() => {
@@ -120,7 +137,11 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      signalRService.stopConnection().catch(console.error)
+      // Only disconnect if we initiated the auto-connect
+      if (hasAttemptedAutoConnectRef.current && signalRService.isConnected()) {
+        console.log('useSignalR cleanup: disconnecting SignalR')
+        signalRService.stopConnection().catch(console.error)
+      }
     }
   }, [])
 
