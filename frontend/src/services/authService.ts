@@ -1,7 +1,6 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { AuthResponse, LoginRequest, RegisterRequest } from '../types'
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7042/api'
+import { API_BASE_URL } from '../util/consts'
 
 const api = axios.create({
   baseURL: API_BASE_URL,

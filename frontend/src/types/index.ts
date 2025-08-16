@@ -41,4 +41,68 @@ export interface ChatMessage {
   isStockBot: boolean
 }
 
+// SignalR DTOs to match backend models
+export interface SignalRMessageDto {
+  id: number
+  content: string
+  userName: string
+  roomId: number
+  createdAt: string
+  isStockBot: boolean
+}
+
+export interface SignalRRoomDto {
+  id: number
+  name: string
+  createdAt: string
+  memberCount: number
+}
+
+export interface SignalRUserPresenceDto {
+  userName: string
+  roomId: string
+}
+
+export interface SignalRErrorDto {
+  message: string
+  code: string
+}
+
+export interface SignalRConnectionDto {
+  userName: string
+  message: string
+}
+
+// API Request/Response types
+export interface CreateRoomRequest {
+  name: string
+}
+
+export interface SendMessageRequest {
+  content: string
+}
+
+export interface ApiResponse<T> {
+  success: boolean
+  data: T
+  message?: string
+}
+
+// UI State Management types
+export interface ChatRoomState {
+  selectedRoomId: number | null
+  rooms: ChatRoom[]
+  messages: ChatMessage[]
+  isConnected: boolean
+  isLoading: boolean
+  error: string | null
+}
+
+export interface MessageInputState {
+  value: string
+  isSubmitting: boolean
+}
+
+export type MessageType = 'user' | 'bot' | 'system'
+
 export type AuthMode = 'login' | 'register'
