@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import signalRService from '../services/signalRService'
 import { SignalRCallbacks } from '../services/signalRService'
 import { SignalRMessageDto, SignalRRoomDto, SignalRUserPresenceDto, SignalRErrorDto } from '../types/signalr'
-import { ChatMessage } from '../types/chat'
 
 interface UseSignalRReturn {
   isConnected: boolean
