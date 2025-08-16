@@ -32,19 +32,44 @@ public interface IStockBotService
 }
 
 /// <summary>
-/// Placeholder implementation of stock bot service
-/// TODO: Replace with actual RabbitMQ implementation
+/// Real implementation of stock bot service using message broker
 /// </summary>
 public class StockBotService : IStockBotService
 {
-  public Task QueueStockRequestAsync(string stockSymbol, string requestedBy, string roomId)
+  private readonly IMessageBrokerService _messageBroker;
+  private readonly ILogger<StockBotService> _logger;
+
+  public StockBotService(IMessageBrokerService messageBroker, ILogger<StockBotService> logger)
   {
-    // TODO: Implement RabbitMQ message queuing
-    // This should NOT save to the database
-    // Instead, it should queue the request for processing by external bot service
-    
-    Console.WriteLine($"[PLACEHOLDER] Queueing stock request: {stockSymbol} for user {requestedBy} in room {roomId}");
-    return Task.CompletedTask;
+    _messageBroker = messageBroker;
+    _logger = logger;
+  }
+
+  public async Task QueueStockRequestAsync(string stockSymbol, string requestedBy, string roomId)
+  {
+    try
+    {
+      var stockRequest = new StockRequestMessage
+      {
+        StockSymbol = stockSymbol,
+        RequestedBy = requestedBy,
+        RoomId = roomId,
+        RequestedAt = DateTime.UtcNow
+      };
+
+      _logger.LogInformation("Queueing stock request: {Symbol} for user {User} in room {RoomId}", 
+        stockSymbol, requestedBy, roomId);
+
+      await _messageBroker.PublishStockRequestAsync(stockRequest);
+      
+      _logger.LogInformation("Successfully queued stock request: {Symbol}", stockSymbol);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to queue stock request: {Symbol} for user {User} in room {RoomId}", 
+        stockSymbol, requestedBy, roomId);
+      throw;
+    }
   }
 
   public bool IsValidStockSymbol(string stockSymbol)

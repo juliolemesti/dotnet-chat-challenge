@@ -14,11 +14,16 @@ public class ChatHub : Hub
 {
   private readonly IChatRepository _chatRepository;
   private readonly IStockBotService _stockBotService;
+  private readonly IMessageBrokerService _messageBroker;
 
-  public ChatHub(IChatRepository chatRepository, IStockBotService stockBotService)
+  public ChatHub(
+    IChatRepository chatRepository, 
+    IStockBotService stockBotService,
+    IMessageBrokerService messageBroker)
   {
     _chatRepository = chatRepository;
     _stockBotService = stockBotService;
+    _messageBroker = messageBroker;
   }
 
   /// <summary>
@@ -135,6 +140,31 @@ public class ChatHub : Hub
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
     
+    // Subscribe to stock responses for this room
+    _messageBroker.SubscribeToStockResponses(roomId, async (stockResponse) =>
+    {
+      try
+      {
+        var botMessage = new SignalRMessageDto
+        {
+          Id = 0, // Stock bot messages are not saved to database
+          Content = stockResponse.FormattedMessage,
+          UserName = "StockBot",
+          RoomId = int.Parse(stockResponse.RoomId),
+          CreatedAt = stockResponse.ResponseAt,
+          IsStockBot = true
+        };
+
+        // Broadcast the bot response to all clients in the room
+        await Clients.Group($"Room_{stockResponse.RoomId}").SendAsync("ReceiveMessage", botMessage);
+        Console.WriteLine($"📈 Stock bot response sent to Room_{stockResponse.RoomId}: {stockResponse.FormattedMessage}");
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"❌ Failed to send stock bot response to Room_{stockResponse.RoomId}: {ex.Message}");
+      }
+    });
+    
     // Create presence DTO for user joined notification
     var presenceDto = new SignalRUserPresenceDto
     {
@@ -170,6 +200,9 @@ public class ChatHub : Hub
 
     // Remove from the room group
     await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Room_{roomId}");
+    
+    // Unsubscribe from stock responses for this room
+    _messageBroker.UnsubscribeFromStockResponses(roomId);
     
     // Create presence DTO for user left notification
     var presenceDto = new SignalRUserPresenceDto
@@ -226,7 +259,7 @@ public class ChatHub : Hub
   }
 
   /// <summary>
-  /// Handle stock bot commands (preparation for future RabbitMQ integration)
+  /// Handle stock bot commands using real message broker
   /// </summary>
   /// <param name="roomId">The room ID where the command was sent</param>
   /// <param name="command">The stock command</param>
@@ -245,46 +278,26 @@ public class ChatHub : Hub
         return;
       }
 
-      // Queue the stock request (future RabbitMQ implementation)
+      // Queue the stock request through the message broker
       await _stockBotService.QueueStockRequestAsync(stockSymbol, userName, roomId);
 
-      // Send placeholder response for now
-      await SendStockBotPlaceholderResponse(roomId, stockSymbol, userName);
+      // Send acknowledgment message to user
+      var ackMessage = new SignalRMessageDto
+      {
+        Id = 0, // Temporary ID for acknowledgment
+        Content = $"Stock request for {stockSymbol} is being processed...",
+        UserName = "StockBot",
+        RoomId = int.Parse(roomId),
+        CreatedAt = DateTime.UtcNow,
+        IsStockBot = true
+      };
+
+      await Clients.Caller.SendAsync("ReceiveMessage", ackMessage);
     }
     catch (Exception)
     {
       var errorDto = SignalRExtensions.CreateErrorDto("Failed to process stock command", "STOCK_COMMAND_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }
-  }
-
-  /// <summary>
-  /// Send a placeholder stock bot response (temporary implementation)
-  /// </summary>
-  /// <param name="roomId">The room ID</param>
-  /// <param name="stockSymbol">The requested stock symbol</param>
-  /// <param name="requestingUser">The user who requested the stock info</param>
-  private async Task SendStockBotPlaceholderResponse(string roomId, string stockSymbol, string requestingUser)
-  {
-    // Create a placeholder bot response message
-    var botMessage = new SignalRMessageDto
-    {
-      Id = 0, // Temporary ID since this won't be saved to database yet
-      Content = $"{stockSymbol} quote is not available yet. Stock bot service is not implemented.",
-      UserName = "StockBot",
-      RoomId = int.Parse(roomId),
-      CreatedAt = DateTime.UtcNow,
-      IsStockBot = true
-    };
-
-    // Broadcast the bot response to all clients in the room
-    await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", botMessage);
-
-    // TODO: Remove this placeholder when RabbitMQ integration is implemented
-    // The actual flow will be:
-    // 1. Queue stock request in RabbitMQ
-    // 2. External bot service processes queue
-    // 3. Bot service calls stooq.com API
-    // 4. Bot service sends response back via SignalR hub
   }
 }
