@@ -10,7 +10,7 @@ import {
   Tooltip
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
-import React from 'react'
+import React, { useRef } from 'react'
 import { useMessageInput } from '../hooks'
 
 interface MessageInputProps {
@@ -67,9 +67,27 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   placeholder = "Type your message... (Try /stock=AAPL.US for stock quotes)"
 }) => {
   const { value, setValue, handleSubmit, handleKeyPress, isSubmitting } = useMessageInput()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleSend = async (): Promise<void> => {
     await handleSubmit(onSendMessage)
+    // Refocus the input after sending
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 0)
+  }
+
+  const handleKeyPressWithFocus = (onSubmit: (message: string) => Promise<void>) => {
+    const originalHandler = handleKeyPress(onSubmit)
+    return async (event: React.KeyboardEvent): Promise<void> => {
+      await originalHandler(event)
+      // Refocus after Enter key submission
+      if (event.key === 'Enter' && !event.shiftKey) {
+        setTimeout(() => {
+          inputRef.current?.focus()
+        }, 0)
+      }
+    }
   }
 
   const isDisabled = disabled || !isConnected || isSubmitting
@@ -83,11 +101,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           maxRows={4}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onKeyPress={handleKeyPress(onSendMessage)}
+          onKeyPress={handleKeyPressWithFocus(onSendMessage)}
           placeholder={placeholder}
           disabled={isDisabled}
           variant="outlined"
           size="small"
+          inputRef={inputRef}
           helperText={
             !isConnected 
               ? "Reconnecting..." 
