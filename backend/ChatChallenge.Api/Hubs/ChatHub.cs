@@ -72,9 +72,14 @@ public class ChatHub : Hub
     {
       var savedMessage = await _chatRepository.AddMessageAsync(chatMessage);
       
+      Console.WriteLine($"💾 Message saved to DB: ID={savedMessage.Id}, RoomId={savedMessage.ChatRoomId}, User={savedMessage.UserName}");
+      
       // Convert to SignalR DTO and broadcast
       var messageDto = savedMessage.ToSignalRDto();
+      Console.WriteLine($"📡 Broadcasting message to group Room_{roomId}: {System.Text.Json.JsonSerializer.Serialize(messageDto)}");
+      
       await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
+      Console.WriteLine($"📡 Message broadcast completed for Room_{roomId}");
     }
     catch (Exception)
     {
@@ -128,6 +133,7 @@ public class ChatHub : Hub
 
     // Join the room group
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
+    Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
     
     // Create presence DTO for user joined notification
     var presenceDto = new SignalRUserPresenceDto
@@ -141,6 +147,7 @@ public class ChatHub : Hub
     
     // Confirm to the caller that they joined successfully
     await Clients.Caller.SendAsync("JoinedRoom", roomId);
+    Console.WriteLine($"🏠 User {userName} successfully joined room {roomId}");
   }
 
   /// <summary>
