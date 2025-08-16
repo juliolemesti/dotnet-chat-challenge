@@ -14,7 +14,9 @@ interface MessageItemProps {
   isCurrentUser?: boolean
 }
 
-const MessageBubble = styled(Paper)<{ isCurrentUser: boolean }>(({ theme, isCurrentUser }) => ({
+const MessageBubble = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isCurrentUser'
+})<{ isCurrentUser: boolean }>(({ theme, isCurrentUser }) => ({
   padding: theme.spacing(1, 1.5),
   maxWidth: '70%',
   backgroundColor: isCurrentUser 

@@ -37,7 +37,9 @@ const InputWrapper = styled(Box)(({ theme }) => ({
   gap: theme.spacing(0.5)
 }))
 
-const StatusChip = styled(Chip)<{ connected: boolean }>(({ theme, connected }) => ({
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'connected'
+})<{ connected: boolean }>(({ theme, connected }) => ({
   fontSize: '0.75rem',
   height: 24,
   backgroundColor: connected ? theme.palette.success.light : theme.palette.error.light,

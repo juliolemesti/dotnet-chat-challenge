@@ -154,14 +154,16 @@ const ChatRoomPage: React.FC = () => {
           
           {/* Connection Toggle Button */}
           <Tooltip title={connectionButtonProps.tooltip}>
-            <IconButton
-              color="inherit"
-              onClick={handleConnectionToggle}
-              disabled={connectionButtonProps.disabled}
-              sx={{ mr: 1 }}
-            >
-              {connectionButtonProps.icon}
-            </IconButton>
+            <span>
+              <IconButton
+                color="inherit"
+                onClick={handleConnectionToggle}
+                disabled={connectionButtonProps.disabled}
+                sx={{ mr: 1 }}
+              >
+                {connectionButtonProps.icon}
+              </IconButton>
+            </span>
           </Tooltip>
           
           {/* Connection Status Indicator */}
