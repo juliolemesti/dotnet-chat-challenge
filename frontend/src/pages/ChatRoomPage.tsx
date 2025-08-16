@@ -167,41 +167,53 @@ const ChatRoomPage: React.FC = () => {
           </Tooltip>
           
           {/* Connection Status Indicator */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              mr: 2,
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              bgcolor: isConnected ? 'success.dark' : isConnecting ? 'warning.dark' : 'error.dark',
-              color: 'white'
-            }}
-          >
+          <Tooltip title={connectionButtonProps.tooltip}>
             <Box
+              onClick={handleConnectionToggle}
               sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                bgcolor: isConnected ? 'success.light' : isConnecting ? 'warning.light' : 'error.light',
-                animation: isConnected ? 'pulse 2s infinite' : isConnecting ? 'spin 1s linear infinite' : 'none',
-                '@keyframes pulse': {
-                  '0%': { opacity: 1 },
-                  '50%': { opacity: 0.5 },
-                  '100%': { opacity: 1 }
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                mr: 2,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                bgcolor: isConnected ? 'success.dark' : isConnecting ? 'warning.dark' : 'error.dark',
+                color: 'white',
+                cursor: connectionButtonProps.disabled ? 'default' : 'pointer',
+                opacity: connectionButtonProps.disabled ? 0.7 : 1,
+                '&:hover': {
+                  bgcolor: connectionButtonProps.disabled 
+                    ? (isConnected ? 'success.dark' : isConnecting ? 'warning.dark' : 'error.dark')
+                    : (isConnected ? 'success.main' : isConnecting ? 'warning.main' : 'error.main'),
+                  transform: connectionButtonProps.disabled ? 'none' : 'scale(1.05)'
                 },
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
+                transition: 'all 0.2s ease-in-out'
               }}
-            />
-            <Typography variant="caption" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : hasReachedMaxRetries ? 'Retry Required' : 'Disconnected'}
-            </Typography>
-          </Box>
+            >
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: isConnected ? 'success.light' : isConnecting ? 'warning.light' : 'error.light',
+                  animation: isConnected ? 'pulse 2s infinite' : isConnecting ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes pulse': {
+                    '0%': { opacity: 1 },
+                    '50%': { opacity: 0.5 },
+                    '100%': { opacity: 1 }
+                  },
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }}
+              />
+              <Typography variant="caption" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : hasReachedMaxRetries ? 'Retry Required' : 'Disconnected'}
+              </Typography>
+            </Box>
+          </Tooltip>
           
           <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
             Welcome, {user?.userName}!
@@ -282,23 +294,6 @@ const ChatRoomPage: React.FC = () => {
         >
           {selectedRoom ? (
             <>
-              {/* Desktop Chat Header - Mobile shows room name in AppBar */}
-              {!isMobile && (
-                <Box
-                  sx={{
-                    p: 2,
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                    backgroundColor: 'background.paper',
-                  }}
-                >
-                  <Typography variant="h6">{selectedRoom.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Connection: {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : hasReachedMaxRetries ? 'Retry Required' : 'Disconnected'}
-                  </Typography>
-                </Box>
-              )}
-
               {/* Center - Messages List */}
               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 <MessageList
