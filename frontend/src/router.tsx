@@ -22,7 +22,7 @@ export const ApplicationRouterProvider = () => {
         },
         {
           path: "/chat",
-          element: <ChatRoomPage />
+          element: isAuthenticated ? <ChatRoomPage /> : <Navigate to="/login" replace />
         }
       ]
     }

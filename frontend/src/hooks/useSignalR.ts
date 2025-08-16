@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import signalRService from '../services/signalRService'
 import { SignalRCallbacks } from '../services/signalRService'
 import { SignalRMessageDto, SignalRRoomDto, SignalRUserPresenceDto, SignalRErrorDto } from '../types/signalr'
+import { useAuth } from '../contexts/AuthContext'
 
 interface UseSignalRReturn {
   isConnected: boolean
@@ -34,7 +35,7 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
   const [error, setError] = useState<string | null>(null)
   const [hasReachedMaxRetries, setHasReachedMaxRetries] = useState(false)
   const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false)
-  const hasInitialized = useRef(false)
+  const { isAuthenticated, token, isLoading } = useAuth()
 
   const {
     onMessageReceived,
@@ -94,11 +95,10 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
     signalRService.setCallbacks(callbacks)
   }, [onMessageReceived, onUserJoined, onUserLeft, onRoomCreated, onJoinedRoom, onLeftRoom, onError])
 
-  // Auto-connect on mount - only once
+  // Auto-connect when authenticated and auto-connect is enabled
   useEffect(() => {
-    if (autoConnect && !hasInitialized.current && !hasAttemptedAutoConnect && !isConnected && !isConnecting) {
+    if (autoConnect && !isLoading && !hasAttemptedAutoConnect && !isConnected && !isConnecting && isAuthenticated && token) {
       console.log('Attempting auto-connect...')
-      hasInitialized.current = true
       setHasAttemptedAutoConnect(true)
       setIsConnecting(true)
       signalRService.startConnection().catch((err) => {
@@ -107,12 +107,23 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
         setIsConnecting(false)
       })
     }
+  }, [autoConnect, isLoading, hasAttemptedAutoConnect, isConnected, isConnecting, isAuthenticated, token])
 
-    // Cleanup on unmount
+  // Disconnect when user logs out
+  useEffect(() => {
+    if (!isAuthenticated && isConnected) {
+      console.log('User logged out, disconnecting SignalR...')
+      signalRService.stopConnection().catch(console.error)
+      setHasAttemptedAutoConnect(false) // Reset so it can auto-connect again when user logs back in
+    }
+  }, [isAuthenticated, isConnected])
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       signalRService.stopConnection().catch(console.error)
     }
-  }, []) // Empty dependency array to run only once
+  }, [])
 
   const sendMessage = useCallback(async (roomId: number, message: string): Promise<void> => {
     try {
@@ -156,7 +167,6 @@ export const useSignalR = (options: UseSignalROptions = {}): UseSignalRReturn =>
       setIsConnecting(true)
       setError(null)
       setHasReachedMaxRetries(false)
-      setHasAttemptedAutoConnect(true)
       await signalRService.startConnection()
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to connect'

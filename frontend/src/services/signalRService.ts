@@ -40,8 +40,7 @@ class SignalRService {
   private setupConnection(): void {
     // Check if token exists before setting up connection
     if (!hasValidToken()) {
-      console.warn('No authentication token found')
-      handleAuthenticationError()
+      console.warn('No authentication token found - cannot setup SignalR connection')
       return
     }
 
@@ -191,10 +190,12 @@ class SignalRService {
       this.setupConnection()
     }
 
+    // Only start if completely disconnected
     if (this.connection?.state === signalR.HubConnectionState.Disconnected) {
       try {
+        console.log('Starting SignalR connection...')
         await this.connection.start()
-        console.log('SignalR connection started')
+        console.log('SignalR connection started successfully')
         this.reconnectAttempts = 0
         this.hasReachedMaxRetries = false
         this.userInitiatedReconnect = false
@@ -211,6 +212,8 @@ class SignalRService {
         
         throw error
       }
+    } else {
+      console.log(`Connection already in state: ${this.connection?.state}`)
     }
   }
 

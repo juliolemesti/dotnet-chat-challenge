@@ -1,4 +1,4 @@
-export const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5016'
+export const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5016'
 
 export const API_BASE_URL = `${BACKEND_BASE_URL}/api`
 
