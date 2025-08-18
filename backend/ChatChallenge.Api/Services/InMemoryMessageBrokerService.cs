@@ -9,10 +9,14 @@ namespace ChatChallenge.Api.Services
     private readonly Channel<StockRequestMessage> _stockRequestChannel;
     private readonly ConcurrentDictionary<string, List<Func<StockResponseMessage, Task>>> _stockResponseHandlers;
     private readonly ILogger<InMemoryMessageBrokerService> _logger;
+    private readonly ISignalRNotificationService _signalRService;
 
-    public InMemoryMessageBrokerService(ILogger<InMemoryMessageBrokerService> logger)
+    public InMemoryMessageBrokerService(
+      ILogger<InMemoryMessageBrokerService> logger,
+      ISignalRNotificationService signalRService)
     {
       _logger = logger;
+      _signalRService = signalRService;
       
       // Create unbounded channel for stock requests
       var options = new UnboundedChannelOptions
@@ -42,14 +46,40 @@ namespace ChatChallenge.Api.Services
     {
       _logger.LogInformation("Publishing stock response for room: {RoomId}", response.RoomId);
       
+      // First, send via SignalR using the notification service
+      try
+      {
+        await _signalRService.SendStockResponseToRoomAsync(response);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to send stock response via SignalR for room: {RoomId}", response.RoomId);
+      }
+
+      // Then, call any registered handlers for backward compatibility
       if (_stockResponseHandlers.TryGetValue(response.RoomId, out var handlers))
       {
-        var tasks = handlers.Select(handler => handler(response)).ToArray();
-        await Task.WhenAll(tasks);
-      }
-      else
-      {
-        _logger.LogWarning("No handlers registered for room: {RoomId}", response.RoomId);
+        var tasks = handlers.Select(handler => 
+        {
+          try
+          {
+            return handler(response);
+          }
+          catch (Exception ex)
+          {
+            _logger.LogError(ex, "Error in stock response handler for room: {RoomId}", response.RoomId);
+            return Task.CompletedTask;
+          }
+        }).ToArray();
+        
+        try
+        {
+          await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error executing stock response handlers for room: {RoomId}", response.RoomId);
+        }
       }
     }
 

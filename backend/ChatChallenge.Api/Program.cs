@@ -37,6 +37,9 @@ builder.Services.AddHttpClient<IStockApiService, StockApiService>();
 // Register Message Broker service (in-memory implementation)
 builder.Services.AddSingleton<IMessageBrokerService, InMemoryMessageBrokerService>();
 
+// Register SignalR notification service as Singleton
+builder.Services.AddSingleton<ISignalRNotificationService, SignalRNotificationService>();
+
 // Register Stock Bot Background Service
 builder.Services.AddHostedService<StockBotBackgroundService>();
 

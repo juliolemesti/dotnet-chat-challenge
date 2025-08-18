@@ -140,31 +140,6 @@ public class ChatHub : Hub
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
     
-    // Subscribe to stock responses for this room
-    _messageBroker.SubscribeToStockResponses(roomId, async (stockResponse) =>
-    {
-      try
-      {
-        var botMessage = new SignalRMessageDto
-        {
-          Id = 0, // Stock bot messages are not saved to database
-          Content = stockResponse.FormattedMessage,
-          UserName = "StockBot",
-          RoomId = int.Parse(stockResponse.RoomId),
-          CreatedAt = stockResponse.ResponseAt,
-          IsStockBot = true
-        };
-
-        // Broadcast the bot response to all clients in the room
-        await Clients.Group($"Room_{stockResponse.RoomId}").SendAsync("ReceiveMessage", botMessage);
-        Console.WriteLine($"📈 Stock bot response sent to Room_{stockResponse.RoomId}: {stockResponse.FormattedMessage}");
-      }
-      catch (Exception ex)
-      {
-        Console.WriteLine($"❌ Failed to send stock bot response to Room_{stockResponse.RoomId}: {ex.Message}");
-      }
-    });
-    
     // Create presence DTO for user joined notification
     var presenceDto = new SignalRUserPresenceDto
     {
