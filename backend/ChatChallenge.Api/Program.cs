@@ -31,6 +31,9 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 // Register Password service
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 
+// Register Encryption service
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+
 // Register Stock Bot service (placeholder for future RabbitMQ integration)
 builder.Services.AddScoped<IStockBotService, StockBotService>();
 
@@ -156,7 +159,14 @@ using (var scope = app.Services.CreateScope())
 {
   var context = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
   var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
-  DbInitializer.Initialize(context, passwordService);
+  var encryptionService = scope.ServiceProvider.GetRequiredService<IEncryptionService>();
+  
+  // Initialize the database first
+  DbInitializer.Initialize(context, passwordService, encryptionService);
+  
+  // Then run data migration to encrypt existing user data (if any)
+  var migrationService = new DataMigrationService(context, encryptionService);
+  await migrationService.MigrateUserDataAsync();
 }
 
 if (app.Environment.IsDevelopment())

@@ -6,7 +6,7 @@ namespace ChatChallenge.Infrastructure.Data;
 
 public static class DbInitializer
 {
-  public static void Initialize(ChatDbContext context, IPasswordService passwordService)
+  public static void Initialize(ChatDbContext context, IPasswordService passwordService, IEncryptionService encryptionService)
   {
     context.Database.EnsureCreated();
 
@@ -38,15 +38,15 @@ public static class DbInitializer
     {
       new User
       {
-        Email = "demo@chat.com",
-        UserName = "DemoUser",
+        Email = encryptionService.Encrypt("demo@chat.com"),
+        UserName = encryptionService.Encrypt("DemoUser"),
         PasswordHash = passwordService.HashPassword("test123"),
         CreatedAt = DateTime.UtcNow
       },
       new User
       {
-        Email = "test@chat.com",
-        UserName = "TestUser",
+        Email = encryptionService.Encrypt("test@chat.com"),
+        UserName = encryptionService.Encrypt("TestUser"),
         PasswordHash = passwordService.HashPassword("test123"),
         CreatedAt = DateTime.UtcNow
       }
