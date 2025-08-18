@@ -134,7 +134,7 @@ export const useChatMessages = (options: UseChatMessagesOptions): UseChatMessage
     setMessages(prev => {
       // Check if message already exists to avoid duplicates
       const exists = prev.some(msg => msg.id === newMessage.id)
-      if (exists) {
+      if (exists && !newMessage.isStockBot) {
         console.log('📨 Message already exists, skipping')
         return prev
       }
