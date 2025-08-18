@@ -21,17 +21,13 @@ public class AuthController : ControllerBase
   [HttpPost("login")]
   public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
   {
-    // Simple validation - in production, use proper password hashing/verification
     var user = await _userRepository.GetUserByEmailAsync(request.Email);
     
     if (user == null)
     {
-      // User doesn't exist - return generic error message (don't specify if email or password is wrong)
       return Unauthorized(new { message = "Invalid credentials" });
     }
 
-    // For demo purposes, assume password validation always passes if user exists
-    // In production, verify hashed password here
     var isValidPassword = await _userRepository.ValidateUserCredentialsAsync(request.Email, request.Password);
     
     if (!isValidPassword)
@@ -73,7 +69,7 @@ public class AuthController : ControllerBase
 
     try
     {
-      var savedUser = await _userRepository.CreateUserAsync(newUser);
+      var savedUser = await _userRepository.CreateUserAsync(newUser, request.Password);
 
       return Ok(new LoginResponse
       {

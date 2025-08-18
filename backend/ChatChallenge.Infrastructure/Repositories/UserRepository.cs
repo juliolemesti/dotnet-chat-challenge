@@ -8,10 +8,12 @@ namespace ChatChallenge.Infrastructure.Repositories;
 public class UserRepository : IUserRepository
 {
   private readonly ChatDbContext _context;
+  private readonly IPasswordService _passwordService;
 
-  public UserRepository(ChatDbContext context)
+  public UserRepository(ChatDbContext context, IPasswordService passwordService)
   {
     _context = context;
+    _passwordService = passwordService;
   }
 
   public async Task<User?> GetUserByEmailAsync(string email)
@@ -26,9 +28,10 @@ public class UserRepository : IUserRepository
       .FirstOrDefaultAsync(u => u.UserName == userName);
   }
 
-  public async Task<User> CreateUserAsync(User user)
+  public async Task<User> CreateUserAsync(User user, string password)
   {
     user.CreatedAt = DateTime.UtcNow;
+    user.PasswordHash = _passwordService.HashPassword(password);
     _context.Users.Add(user);
     await _context.SaveChangesAsync();
     return user;
@@ -36,8 +39,12 @@ public class UserRepository : IUserRepository
 
   public async Task<bool> ValidateUserCredentialsAsync(string email, string password)
   {
-    // For demo purposes - in production, use proper password hashing
     var user = await GetUserByEmailAsync(email);
-    return user != null;
+    if (user == null)
+    {
+      return false;
+    }
+
+    return _passwordService.VerifyPassword(password, user.PasswordHash);
   }
 }

@@ -28,6 +28,9 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 // Register JWT service
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// Register Password service
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+
 // Register Stock Bot service (placeholder for future RabbitMQ integration)
 builder.Services.AddScoped<IStockBotService, StockBotService>();
 
