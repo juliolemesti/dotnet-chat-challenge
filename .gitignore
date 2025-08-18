@@ -114,3 +114,5 @@ docker-compose.override.yml
 rabbitmq_data/
 
 # PostgreSQL data
+chatapp.db-shm
+chatapp.db-wal
