@@ -17,7 +17,8 @@ public class StockBotSignalRIntegrationTests
   {
     _mockLogger = new Mock<ILogger<StockBotService>>();
     _messageBrokerService = new InMemoryMessageBrokerService(
-      Mock.Of<ILogger<InMemoryMessageBrokerService>>());
+      Mock.Of<ILogger<InMemoryMessageBrokerService>>(),
+      Mock.Of<ISignalRNotificationService>());
     _stockBotService = new StockBotService(_messageBrokerService, _mockLogger.Object);
   }
 

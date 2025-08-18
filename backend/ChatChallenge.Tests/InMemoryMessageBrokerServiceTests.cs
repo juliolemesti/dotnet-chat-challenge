@@ -9,12 +9,14 @@ namespace ChatChallenge.Tests
   public class InMemoryMessageBrokerServiceTests
   {
     private readonly Mock<ILogger<InMemoryMessageBrokerService>> _loggerMock;
+    private readonly Mock<ISignalRNotificationService> _signalRServiceMock;
     private readonly InMemoryMessageBrokerService _messageBrokerService;
 
     public InMemoryMessageBrokerServiceTests()
     {
       _loggerMock = new Mock<ILogger<InMemoryMessageBrokerService>>();
-      _messageBrokerService = new InMemoryMessageBrokerService(_loggerMock.Object);
+      _signalRServiceMock = new Mock<ISignalRNotificationService>();
+      _messageBrokerService = new InMemoryMessageBrokerService(_loggerMock.Object, _signalRServiceMock.Object);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ namespace ChatChallenge.Tests
     }
 
     [Fact]
-    public async Task PublishStockResponse_WithoutSubscribedHandler_ShouldLogWarning()
+    public async Task PublishStockResponse_ShouldCallSignalRService()
     {
       // Arrange
       var response = new StockResponseMessage
@@ -89,14 +91,12 @@ namespace ChatChallenge.Tests
       // Act
       await _messageBrokerService.PublishStockResponseAsync(response);
 
-      // Assert - verify warning was logged
-      _loggerMock.Verify(
-        x => x.Log(
-          LogLevel.Warning,
-          It.IsAny<EventId>(),
-          It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No handlers registered for room: room456")),
-          It.IsAny<Exception?>(),
-          It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+      // Assert - verify SignalR service was called
+      _signalRServiceMock.Verify(
+        x => x.SendStockResponseToRoomAsync(It.Is<StockResponseMessage>(r => 
+          r.StockSymbol == response.StockSymbol && 
+          r.RoomId == response.RoomId && 
+          r.FormattedMessage == response.FormattedMessage)),
         Times.Once);
     }
 
