@@ -155,7 +155,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
   var context = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
-  DbInitializer.Initialize(context);
+  var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+  DbInitializer.Initialize(context, passwordService);
 }
 
 if (app.Environment.IsDevelopment())

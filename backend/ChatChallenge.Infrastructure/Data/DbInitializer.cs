@@ -1,11 +1,12 @@
 using ChatChallenge.Core.Entities;
+using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Infrastructure.Data;
 
 namespace ChatChallenge.Infrastructure.Data;
 
 public static class DbInitializer
 {
-  public static void Initialize(ChatDbContext context)
+  public static void Initialize(ChatDbContext context, IPasswordService passwordService)
   {
     context.Database.EnsureCreated();
 
@@ -39,12 +40,14 @@ public static class DbInitializer
       {
         Email = "demo@chat.com",
         UserName = "DemoUser",
+        PasswordHash = passwordService.HashPassword("test123"),
         CreatedAt = DateTime.UtcNow
       },
       new User
       {
         Email = "test@chat.com",
         UserName = "TestUser",
+        PasswordHash = passwordService.HashPassword("test123"),
         CreatedAt = DateTime.UtcNow
       }
     };
