@@ -72,11 +72,9 @@ builder.Services.AddAuthentication(options =>
     {
       OnMessageReceived = context =>
       {
-        // Check if the request is for SignalR hub
         var accessToken = context.Request.Query["access_token"];
         var path = context.HttpContext.Request.Path;
         
-        // If the request is for our hub and we have an access token
         if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
         {
           context.Token = accessToken;
@@ -85,7 +83,6 @@ builder.Services.AddAuthentication(options =>
       },
       OnAuthenticationFailed = context =>
       {
-        // Log authentication failures for debugging
         if (context.Request.Path.StartsWithSegments("/chathub"))
         {
           Console.WriteLine($"SignalR JWT Authentication failed: {context.Exception.Message}");
@@ -94,7 +91,6 @@ builder.Services.AddAuthentication(options =>
       },
       OnTokenValidated = context =>
       {
-        // Optional: Add custom claims validation for SignalR
         if (context.Request.Path.StartsWithSegments("/chathub"))
         {
           var userName = context.Principal?.FindFirst(ClaimTypes.Name)?.Value;
@@ -117,7 +113,7 @@ builder.Services.AddCors(options =>
       policy.WithOrigins("http://localhost:3000")
         .AllowAnyMethod()
         .AllowAnyHeader()
-        .AllowCredentials(); // Required for SignalR
+        .AllowCredentials();
     });
 });
 
@@ -159,17 +155,10 @@ using (var scope = app.Services.CreateScope())
   DbInitializer.Initialize(context);
 }
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
   app.UseSwagger();
   app.UseSwaggerUI();
-}
-
-// Only use HTTPS redirection in production
-if (!app.Environment.IsDevelopment())
-{
-  app.UseHttpsRedirection();
 }
 
 app.UseCors("AllowFrontend");

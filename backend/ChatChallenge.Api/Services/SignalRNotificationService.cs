@@ -24,7 +24,7 @@ namespace ChatChallenge.Api.Services
       {
         var botMessage = new SignalRMessageDto
         {
-          Id = 0, // Stock bot messages are not saved to database
+          Id = Random.Shared.Next(100000, 999999),
           Content = stockResponse.FormattedMessage,
           UserName = "StockBot",
           RoomId = int.Parse(stockResponse.RoomId),

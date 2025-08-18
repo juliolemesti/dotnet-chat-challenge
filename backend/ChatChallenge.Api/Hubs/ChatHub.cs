@@ -259,7 +259,7 @@ public class ChatHub : Hub
       // Send acknowledgment message to user
       var ackMessage = new SignalRMessageDto
       {
-        Id = 0, // Temporary ID for acknowledgment
+        Id = Random.Shared.Next(100000, 999999),
         Content = $"Stock request for {stockSymbol} is being processed...",
         UserName = "StockBot",
         RoomId = int.Parse(roomId),
