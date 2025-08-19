@@ -163,10 +163,6 @@ using (var scope = app.Services.CreateScope())
   
   // Initialize the database first
   DbInitializer.Initialize(context, passwordService, encryptionService);
-  
-  // Then run data migration to encrypt existing user data (if any)
-  var migrationService = new DataMigrationService(context, encryptionService);
-  await migrationService.MigrateUserDataAsync();
 }
 
 if (app.Environment.IsDevelopment())
