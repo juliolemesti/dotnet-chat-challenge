@@ -47,7 +47,7 @@ npm install
 
 ### Development Mode
 ```bash
-# Run the backend API (opens Swagger UI at https://localhost:7147)
+# Run the backend API (opens Swagger UI at http://localhost:5016)
 cd backend
 dotnet run --project ChatChallenge.Api
 
