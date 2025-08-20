@@ -13,7 +13,7 @@ public class JwtMiddleware
     {
         var token = context.Request.Query["access_token"];
         
-        // If the request is for our SignalR hub...
+        // If the request is for our SignalR hub
         var path = context.Request.Path;
         if (!string.IsNullOrEmpty(token) && 
             (path.StartsWithSegments("/chathub") || path.StartsWithSegments("/api")))
