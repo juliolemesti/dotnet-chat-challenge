@@ -21,7 +21,7 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-// Register Infrastructure services (kept in Api for now)
+// Register Infrastructure services
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 
