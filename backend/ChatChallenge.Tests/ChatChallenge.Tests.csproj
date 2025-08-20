@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChatChallenge.Core\ChatChallenge.Core.csproj" />
     <ProjectReference Include="..\ChatChallenge.Api\ChatChallenge.Api.csproj" />
+    <ProjectReference Include="..\ChatChallenge.Application\ChatChallenge.Application.csproj" />
   </ItemGroup>
 
 </Project>

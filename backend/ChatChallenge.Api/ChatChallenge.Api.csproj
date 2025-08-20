@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ChatChallenge.Core\ChatChallenge.Core.csproj" />
     <ProjectReference Include="..\ChatChallenge.Infrastructure\ChatChallenge.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatChallenge.Application\ChatChallenge.Application.csproj" />
   </ItemGroup>
 
 </Project>
