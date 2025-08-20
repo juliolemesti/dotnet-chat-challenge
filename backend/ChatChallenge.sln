@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatChallenge.Infrastructur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatChallenge.Tests", "ChatChallenge.Tests\ChatChallenge.Tests.csproj", "{90DB08D9-D30D-4AEE-ABE5-0D1742F845A0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatChallenge.Application", "ChatChallenge.Application\ChatChallenge.Application.csproj", "{34CA889C-25AA-4AB4-888E-A56B162D7907}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{90DB08D9-D30D-4AEE-ABE5-0D1742F845A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90DB08D9-D30D-4AEE-ABE5-0D1742F845A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90DB08D9-D30D-4AEE-ABE5-0D1742F845A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34CA889C-25AA-4AB4-888E-A56B162D7907}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34CA889C-25AA-4AB4-888E-A56B162D7907}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34CA889C-25AA-4AB4-888E-A56B162D7907}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34CA889C-25AA-4AB4-888E-A56B162D7907}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

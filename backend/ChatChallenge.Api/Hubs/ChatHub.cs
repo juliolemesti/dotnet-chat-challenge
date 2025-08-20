@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using ChatChallenge.Application.Interfaces;
-using ChatChallenge.Application.DTOs;
-using ChatChallenge.Application.Extensions;
 using ChatChallenge.Api.Services;
+using ChatChallenge.Core.Interfaces;
+using ChatChallenge.Core.Entities;
+using ChatChallenge.Api.Extensions;
+using ChatChallenge.Api.Models;
 
 namespace ChatChallenge.Api.Hubs;
 
@@ -13,12 +15,12 @@ public class ChatHub : Hub
 {
   private readonly IChatRepository _chatRepository;
   private readonly IStockBotService _stockBotService;
-  private readonly IMessageBrokerService _messageBroker;
+  private readonly ChatChallenge.Api.Services.IMessageBrokerService _messageBroker;
 
   public ChatHub(
     IChatRepository chatRepository, 
     IStockBotService stockBotService,
-    IMessageBrokerService messageBroker)
+    ChatChallenge.Api.Services.IMessageBrokerService messageBroker)
   {
     _chatRepository = chatRepository;
     _stockBotService = stockBotService;
