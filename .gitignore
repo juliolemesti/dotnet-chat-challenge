@@ -23,7 +23,6 @@ out/
 project.lock.json
 project.fragment.lock.json
 artifacts/
-**/Properties/launchSettings.json
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
