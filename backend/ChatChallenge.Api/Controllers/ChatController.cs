@@ -1,12 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
-using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
-using ChatChallenge.Api.Hubs;
-using ChatChallenge.Api.Models;
-using ChatChallenge.Api.Extensions;
+using ChatChallenge.Application.Interfaces;
 
 namespace ChatChallenge.Api.Controllers;
 
@@ -15,27 +11,37 @@ namespace ChatChallenge.Api.Controllers;
 [Authorize]
 public class ChatController : ControllerBase
 {
-  private readonly IChatRepository _chatRepository;
-  private readonly IHubContext<ChatHub> _hubContext;
+  private readonly IChatService _chatService;
 
-  public ChatController(IChatRepository chatRepository, IHubContext<ChatHub> hubContext)
+  public ChatController(IChatService chatService)
   {
-    _chatRepository = chatRepository;
-    _hubContext = hubContext;
+    _chatService = chatService;
   }
 
   [HttpGet("rooms")]
   public async Task<ActionResult<List<ChatRoom>>> GetRooms()
   {
-    var rooms = await _chatRepository.GetAllRoomsAsync();
-    return Ok(rooms);
+    var result = await _chatService.GetAllRoomsAsync();
+    
+    if (!result.IsSuccess)
+    {
+      return StatusCode(500, new { message = result.ErrorMessage, code = result.ErrorCode });
+    }
+
+    return Ok(result.Data);
   }
 
   [HttpGet("rooms/{roomId}/messages")]
   public async Task<ActionResult<List<ChatMessage>>> GetMessages(int roomId, [FromQuery] int count = 50)
   {
-    var messages = await _chatRepository.GetLastMessagesAsync(roomId, count);
-    return Ok(messages);
+    var result = await _chatService.GetLastMessagesAsync(roomId, count);
+    
+    if (!result.IsSuccess)
+    {
+      return StatusCode(500, new { message = result.ErrorMessage, code = result.ErrorCode });
+    }
+
+    return Ok(result.Data);
   }
 
   [HttpPost("rooms/{roomId}/messages")]
@@ -48,64 +54,33 @@ public class ChatController : ControllerBase
       return Unauthorized("Invalid token: username not found");
     }
 
-    if (string.IsNullOrWhiteSpace(request.Content))
+    var result = await _chatService.SendMessageAsync(roomId, request.Content, userName);
+    
+    if (!result.IsSuccess)
     {
-      return BadRequest("Message content cannot be empty");
+      if (result.ErrorCode == "EMPTY_CONTENT")
+        return BadRequest(result.ErrorMessage);
+        
+      return StatusCode(500, new { message = result.ErrorMessage, code = result.ErrorCode });
     }
 
-    var message = new ChatMessage
-    {
-      Content = request.Content,
-      UserName = userName,
-      ChatRoomId = roomId,
-      IsStockBot = false
-    };
-
-    try
-    {
-      // Save message to database
-      var savedMessage = await _chatRepository.AddMessageAsync(message);
-
-      // Convert to SignalR DTO and broadcast to room
-      var messageDto = savedMessage.ToSignalRDto();
-      await _hubContext.Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
-
-      return CreatedAtAction(nameof(GetMessages), new { roomId }, savedMessage);
-    }
-    catch (Exception)
-    {
-      return StatusCode(500, "Failed to send message");
-    }
+    return CreatedAtAction(nameof(GetMessages), new { roomId }, result.Data);
   }
 
   [HttpPost("rooms")]
   public async Task<ActionResult<ChatRoom>> CreateRoom([FromBody] CreateRoomRequest request)
   {
-    if (string.IsNullOrWhiteSpace(request.Name))
+    var result = await _chatService.CreateRoomAsync(request.Name);
+    
+    if (!result.IsSuccess)
     {
-      return BadRequest("Room name cannot be empty");
+      if (result.ErrorCode == "EMPTY_NAME")
+        return BadRequest(result.ErrorMessage);
+        
+      return StatusCode(500, new { message = result.ErrorMessage, code = result.ErrorCode });
     }
 
-    var room = new ChatRoom
-    {
-      Name = request.Name
-    };
-
-    try
-    {
-      // Save room to database
-      var savedRoom = await _chatRepository.CreateRoomAsync(room);
-
-      // Convert to SignalR DTO and broadcast to all clients
-      var roomDto = savedRoom.ToSignalRDto(memberCount: 0);
-      await _hubContext.Clients.All.SendAsync("RoomCreated", roomDto);
-
-      return CreatedAtAction(nameof(GetRooms), savedRoom);
-    }
-    catch (Exception)
-    {
-      return StatusCode(500, "Failed to create room");
-    }
+    return CreatedAtAction(nameof(GetRooms), result.Data);
   }
 }
 

@@ -1,35 +1,8 @@
-using ChatChallenge.Api.Models;
+using Microsoft.Extensions.Logging;
+using ChatChallenge.Application.DTOs;
+using ChatChallenge.Application.Interfaces;
 
-namespace ChatChallenge.Api.Services;
-
-/// <summary>
-/// Interface for stock bot service (preparation for future RabbitMQ integration)
-/// </summary>
-public interface IStockBotService
-{
-  /// <summary>
-  /// Queue a stock quote request (future RabbitMQ implementation)
-  /// </summary>
-  /// <param name="stockSymbol">The stock symbol to query</param>
-  /// <param name="requestedBy">The user requesting the stock quote</param>
-  /// <param name="roomId">The room where the request originated</param>
-  /// <returns>Task representing the async operation</returns>
-  Task QueueStockRequestAsync(string stockSymbol, string requestedBy, string roomId);
-
-  /// <summary>
-  /// Validate if a stock symbol is in correct format
-  /// </summary>
-  /// <param name="stockSymbol">The stock symbol to validate</param>
-  /// <returns>True if the symbol is valid</returns>
-  bool IsValidStockSymbol(string stockSymbol);
-
-  /// <summary>
-  /// Extract stock symbol from command string
-  /// </summary>
-  /// <param name="command">The command string (e.g., "/stock=AAPL.US")</param>
-  /// <returns>The extracted stock symbol or null if invalid</returns>
-  string? ExtractStockSymbol(string command);
-}
+namespace ChatChallenge.Application.Services;
 
 /// <summary>
 /// Real implementation of stock bot service using message broker
@@ -77,13 +50,12 @@ public class StockBotService : IStockBotService
     if (string.IsNullOrWhiteSpace(stockSymbol) || stockSymbol.Length > 20)
       return false;
 
-    // Allow alphanumeric characters, dots, and hyphens (common in stock symbols)
     return System.Text.RegularExpressions.Regex.IsMatch(stockSymbol, @"^[A-Za-z0-9.\-]+$");
   }
 
   public string? ExtractStockSymbol(string command)
   {
-    if (!command.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase))
+    if (string.IsNullOrEmpty(command) || !command.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase))
       return null;
 
     var symbol = command.Substring(7).Trim().ToUpperInvariant();

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
-using ChatChallenge.Api.Services;
+using ChatChallenge.Application.Interfaces;
 
 namespace ChatChallenge.Api.Controllers;
 

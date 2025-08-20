@@ -9,20 +9,16 @@ namespace ChatChallenge.Api.Services
     private readonly Channel<StockRequestMessage> _stockRequestChannel;
     private readonly ConcurrentDictionary<string, List<Func<StockResponseMessage, Task>>> _stockResponseHandlers;
     private readonly ILogger<InMemoryMessageBrokerService> _logger;
-    private readonly ISignalRNotificationService _signalRService;
 
     public InMemoryMessageBrokerService(
-      ILogger<InMemoryMessageBrokerService> logger,
-      ISignalRNotificationService signalRService)
+      ILogger<InMemoryMessageBrokerService> logger)
     {
       _logger = logger;
-      _signalRService = signalRService;
       
-      // Create unbounded channel for stock requests
       var options = new UnboundedChannelOptions
       {
-        SingleReader = true, // Only one background service will consume
-        SingleWriter = false // Multiple SignalR connections can publish
+        SingleReader = true, 
+        SingleWriter = false
       };
       
       _stockRequestChannel = Channel.CreateUnbounded<StockRequestMessage>(options);
@@ -45,18 +41,9 @@ namespace ChatChallenge.Api.Services
     public async Task PublishStockResponseAsync(StockResponseMessage response)
     {
       _logger.LogInformation("Publishing stock response for room: {RoomId}", response.RoomId);
-      
-      // First, send via SignalR using the notification service
-      try
-      {
-        await _signalRService.SendStockResponseToRoomAsync(response);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Failed to send stock response via SignalR for room: {RoomId}", response.RoomId);
-      }
+      _logger.LogInformation("Publishing stock response for room: {RoomId}, Symbol: {Symbol}", 
+        response.RoomId, response.StockSymbol);
 
-      // Then, call any registered handlers for backward compatibility
       if (_stockResponseHandlers.TryGetValue(response.RoomId, out var handlers))
       {
         var tasks = handlers.Select(handler => 

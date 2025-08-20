@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
-using ChatChallenge.Api.Services;
+using ChatChallenge.Application.Interfaces;
+using ChatChallenge.Application.Services;
 using ChatChallenge.Core.Entities;
 
 namespace ChatChallenge.Tests;

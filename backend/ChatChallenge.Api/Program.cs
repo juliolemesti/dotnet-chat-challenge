@@ -7,15 +7,16 @@ using ChatChallenge.Infrastructure.Data;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Infrastructure.Repositories;
 using ChatChallenge.Api.Services;
-using ChatChallenge.Api.Hubs;
+using ChatChallenge.Application.Extensions;
+using ChatChallenge.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
 
-// Add SignalR
-builder.Services.AddSignalR();
+// Register Application layer services
+builder.Services.AddApplicationServices();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ChatDbContext>(options =>
@@ -25,26 +26,15 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-// Register JWT service
-builder.Services.AddScoped<IJwtService, JwtService>();
-
-// Register Password service
+// Register Infrastructure services (kept in Api for now)
 builder.Services.AddScoped<IPasswordService, PasswordService>();
-
-// Register Encryption service
 builder.Services.AddScoped<IEncryptionService, EncryptionService>();
-
-// Register Stock Bot service (placeholder for future RabbitMQ integration)
-builder.Services.AddScoped<IStockBotService, StockBotService>();
 
 // Register Stock API service with HttpClient
 builder.Services.AddHttpClient<IStockApiService, StockApiService>();
 
 // Register Message Broker service (in-memory implementation)
 builder.Services.AddSingleton<IMessageBrokerService, InMemoryMessageBrokerService>();
-
-// Register SignalR notification service as Singleton
-builder.Services.AddSingleton<ISignalRNotificationService, SignalRNotificationService>();
 
 // Register Stock Bot Background Service
 builder.Services.AddHostedService<StockBotBackgroundService>();
@@ -176,7 +166,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Map SignalR Hub
-app.MapHub<ChatHub>("/chathub");
+// Map SignalR Hub (now from Application layer)
+app.MapHub<ChatChallenge.Application.Hubs.ChatHub>("/chathub");
 
 app.Run();
