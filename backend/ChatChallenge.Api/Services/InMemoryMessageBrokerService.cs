@@ -5,9 +5,7 @@ using ChatChallenge.Application.DTOs;
 
 namespace ChatChallenge.Api.Services
 {
-  public class InMemoryMessageBrokerService : 
-    ChatChallenge.Application.Interfaces.IMessageBrokerService,
-    ChatChallenge.Api.Services.IMessageBrokerService
+  public class InMemoryMessageBrokerService : IMessageBrokerService
   {
     private readonly Channel<StockRequestMessage> _stockRequestChannel;
     private readonly ConcurrentDictionary<string, List<Func<StockResponseMessage, Task>>> _stockResponseHandlers;
@@ -36,51 +34,12 @@ namespace ChatChallenge.Api.Services
       await _stockRequestChannel.Writer.WriteAsync(request);
     }
 
-    public void SubscribeToStockResponses(string roomId, Func<StockResponseMessage, Task> handler)
-    {
-      _logger.LogInformation("Subscribing to stock responses for room: {RoomId}", roomId);
-      
-      _stockResponseHandlers.AddOrUpdate(roomId,
-        new List<Func<StockResponseMessage, Task>> { handler },
-        (key, existing) =>
-        {
-          existing.Add(handler);
-          return existing;
-        });
-    }
-
-    public void UnsubscribeFromStockResponses(string roomId)
-    {
-      _logger.LogInformation("Unsubscribing from stock responses for room: {RoomId}", roomId);
-      _stockResponseHandlers.TryRemove(roomId, out _);
-    }
-
-    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockRequestAsync(StockRequestMessage request)
-    {
-      await PublishStockRequestAsync(request);
-    }
-
     public async Task<StockRequestMessage> ConsumeStockRequestAsync(CancellationToken cancellationToken = default)
     {
       return await _stockRequestChannel.Reader.ReadAsync(cancellationToken);
     }
 
-    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockResponseAsync(StockResponseMessage response)
-    {
-      await PublishStockResponseInternalAsync(response);
-    }
-
-    void ChatChallenge.Api.Services.IMessageBrokerService.SubscribeToStockResponses(string roomId, Func<StockResponseMessage, Task> handler)
-    {
-      SubscribeToStockResponses(roomId, handler);
-    }
-
-    void ChatChallenge.Api.Services.IMessageBrokerService.UnsubscribeFromStockResponses(string roomId)
-    {
-      UnsubscribeFromStockResponses(roomId);
-    }
-
-    private async Task PublishStockResponseInternalAsync(StockResponseMessage response)
+    public async Task PublishStockResponseAsync(StockResponseMessage response)
     {
       _logger.LogInformation("📢 Publishing stock response for room: {RoomId}, Symbol: {Symbol}", 
         response.RoomId, response.StockSymbol);
@@ -120,6 +79,25 @@ namespace ChatChallenge.Api.Services
         _logger.LogWarning("⚠️ Available rooms with handlers: {AvailableRooms}", 
           string.Join(", ", _stockResponseHandlers.Keys));
       }
+    }
+
+    public void SubscribeToStockResponses(string roomId, Func<StockResponseMessage, Task> handler)
+    {
+      _logger.LogInformation("Subscribing to stock responses for room: {RoomId}", roomId);
+      
+      _stockResponseHandlers.AddOrUpdate(roomId,
+        new List<Func<StockResponseMessage, Task>> { handler },
+        (key, existing) =>
+        {
+          existing.Add(handler);
+          return existing;
+        });
+    }
+
+    public void UnsubscribeFromStockResponses(string roomId)
+    {
+      _logger.LogInformation("Unsubscribing from stock responses for room: {RoomId}", roomId);
+      _stockResponseHandlers.TryRemove(roomId, out _);
     }
   }
 }

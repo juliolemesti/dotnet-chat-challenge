@@ -33,8 +33,6 @@ builder.Services.AddHttpClient<IStockApiService, StockApiService>();
 builder.Services.AddSingleton<InMemoryMessageBrokerService>();
 builder.Services.AddSingleton<ChatChallenge.Application.Interfaces.IMessageBrokerService>(provider => 
   provider.GetRequiredService<InMemoryMessageBrokerService>());
-builder.Services.AddSingleton<ChatChallenge.Api.Services.IMessageBrokerService>(provider => 
-  provider.GetRequiredService<InMemoryMessageBrokerService>());
 
 // Register Stock Bot Background Service
 builder.Services.AddHostedService<StockBotBackgroundService>();
