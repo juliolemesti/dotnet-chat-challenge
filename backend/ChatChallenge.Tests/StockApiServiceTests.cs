@@ -26,7 +26,6 @@ public class StockApiServiceTests
   [Fact]
   public async Task GetStockQuoteAsync_ValidResponse_ReturnsSuccessResult()
   {
-    // Arrange
     var stockSymbol = "AAPL.US";
     var csvResponse = "Symbol,Date,Time,Open,High,Low,Close,Volume\nAAPL.US,2023-10-20,22:00:01,173.50,175.35,172.65,174.22,45234567";
     
@@ -43,10 +42,8 @@ public class StockApiServiceTests
         ItExpr.IsAny<CancellationToken>())
       .ReturnsAsync(mockResponse);
 
-    // Act
     var result = await _stockApiService.GetStockQuoteAsync(stockSymbol);
 
-    // Assert
     Assert.True(result.IsSuccess);
     Assert.Equal(stockSymbol, result.StockSymbol);
     Assert.Equal(174.22m, result.Price);
@@ -57,7 +54,6 @@ public class StockApiServiceTests
   [Fact]
   public async Task GetStockQuoteAsync_InvalidStockSymbol_ReturnsErrorResult()
   {
-    // Arrange
     var stockSymbol = "INVALID";
     var csvResponse = "Symbol,Date,Time,Open,High,Low,Close,Volume\nINVALID,N/D,N/D,N/D,N/D,N/D,N/D,N/D";
     
@@ -74,10 +70,8 @@ public class StockApiServiceTests
         ItExpr.IsAny<CancellationToken>())
       .ReturnsAsync(mockResponse);
 
-    // Act
     var result = await _stockApiService.GetStockQuoteAsync(stockSymbol);
 
-    // Assert
     Assert.False(result.IsSuccess);
     Assert.Equal(stockSymbol, result.StockSymbol);
     Assert.Null(result.Price);
@@ -88,7 +82,6 @@ public class StockApiServiceTests
   [Fact]
   public async Task GetStockQuoteAsync_HttpError_ReturnsErrorResult()
   {
-    // Arrange
     var stockSymbol = "AAPL.US";
     
     var mockResponse = new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -104,10 +97,8 @@ public class StockApiServiceTests
         ItExpr.IsAny<CancellationToken>())
       .ReturnsAsync(mockResponse);
 
-    // Act
     var result = await _stockApiService.GetStockQuoteAsync(stockSymbol);
 
-    // Assert
     Assert.False(result.IsSuccess);
     Assert.Equal(stockSymbol, result.StockSymbol);
     Assert.Null(result.Price);
@@ -118,7 +109,6 @@ public class StockApiServiceTests
   [Fact]
   public async Task GetStockQuoteAsync_EmptyResponse_ReturnsErrorResult()
   {
-    // Arrange
     var stockSymbol = "AAPL.US";
     var csvResponse = "";
     
@@ -135,10 +125,8 @@ public class StockApiServiceTests
         ItExpr.IsAny<CancellationToken>())
       .ReturnsAsync(mockResponse);
 
-    // Act
     var result = await _stockApiService.GetStockQuoteAsync(stockSymbol);
 
-    // Assert
     Assert.False(result.IsSuccess);
     Assert.Equal(stockSymbol, result.StockSymbol);
     Assert.Null(result.Price);

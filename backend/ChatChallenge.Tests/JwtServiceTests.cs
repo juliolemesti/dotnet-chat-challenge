@@ -11,7 +11,6 @@ public class JwtServiceTests
 
     public JwtServiceTests()
     {
-        // Create a mock configuration for testing
         var inMemorySettings = new Dictionary<string, string?> {
             {"Jwt:Key", "ThisIsATestSecretKeyForJWTTokenGenerationThatIsLongEnough"},
             {"Jwt:Issuer", "TestIssuer"},
@@ -29,7 +28,6 @@ public class JwtServiceTests
     [Fact]
     public void GenerateToken_ShouldReturnValidJwtToken()
     {
-        // Arrange
         var user = new User 
         { 
             Id = 1, 
@@ -37,10 +35,8 @@ public class JwtServiceTests
             Email = "test@example.com" 
         };
 
-        // Act
         var token = _jwtService.GenerateToken(user);
 
-        // Assert
         Assert.NotNull(token);
         Assert.NotEmpty(token);
         Assert.Contains(".", token); // JWT tokens contain dots
@@ -49,7 +45,6 @@ public class JwtServiceTests
     [Fact]
     public void ValidateToken_WithValidToken_ShouldReturnClaimsPrincipal()
     {
-        // Arrange
         var user = new User 
         { 
             Id = 1, 
@@ -58,10 +53,8 @@ public class JwtServiceTests
         };
         var token = _jwtService.GenerateToken(user);
 
-        // Act
         var principal = _jwtService.ValidateToken(token);
 
-        // Assert
         Assert.NotNull(principal);
         Assert.Equal("testuser", principal.FindFirst(ClaimTypes.Name)?.Value);
         Assert.Equal("test@example.com", principal.FindFirst(ClaimTypes.Email)?.Value);
@@ -71,13 +64,10 @@ public class JwtServiceTests
     [Fact]
     public void ValidateToken_WithInvalidToken_ShouldReturnNull()
     {
-        // Arrange
         var invalidToken = "invalid.jwt.token";
 
-        // Act
         var principal = _jwtService.ValidateToken(invalidToken);
 
-        // Assert
         Assert.Null(principal);
     }
 }
