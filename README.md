@@ -72,10 +72,4 @@ dotnet test
 # Run backend tests
 cd backend
 dotnet test
-
-# Run specific test project
-dotnet test ChatChallenge.Tests
-
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
 ```
