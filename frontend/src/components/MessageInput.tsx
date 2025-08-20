@@ -3,7 +3,6 @@ import {
 } from '@mui/icons-material'
 import {
   Box,
-  Chip,
   IconButton,
   Paper,
   TextField,
@@ -26,18 +25,6 @@ const InputContainer = styled(Paper)(({ theme }) => ({
   borderTop: `1px solid ${theme.palette.divider}`,
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(1),
-  }
-}))
-
-const StatusChip = styled(Chip, {
-  shouldForwardProp: (prop) => prop !== 'connected'
-})<{ connected: boolean }>(({ theme, connected }) => ({
-  fontSize: '0.75rem',
-  height: 24,
-  backgroundColor: connected ? theme.palette.success.light : theme.palette.error.light,
-  color: connected ? theme.palette.success.contrastText : theme.palette.error.contrastText,
-  '& .MuiChip-icon': {
-    color: 'inherit'
   }
 }))
 
