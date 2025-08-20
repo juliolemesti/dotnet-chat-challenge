@@ -1,31 +1,30 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using Microsoft.Extensions.Logging;
-using ChatChallenge.Application.DTOs;
 using ChatChallenge.Application.Interfaces;
-using ChatChallenge.Application.Extensions;
+using ChatChallenge.Application.DTOs;
+using ChatChallenge.Api.Services;
+using ChatChallenge.Core.Interfaces;
+using ChatChallenge.Core.Entities;
+using ChatChallenge.Api.Extensions;
 
-namespace ChatChallenge.Application.Hubs;
+namespace ChatChallenge.Api.Hubs;
 
-/// <summary>
-/// SignalR Hub for real-time chat functionality
-/// </summary>
 [Authorize]
-public class ChatHub : Hub, IChatHub
+public class ChatHub : Hub
 {
-  private readonly IChatService _chatService;
+  private readonly IChatRepository _chatRepository;
   private readonly IStockBotService _stockBotService;
-  private readonly ILogger<ChatHub> _logger;
+  private readonly IMessageBrokerService _messageBroker;
 
   public ChatHub(
-    IChatService chatService, 
+    IChatRepository chatRepository, 
     IStockBotService stockBotService,
-    ILogger<ChatHub> logger)
+    IMessageBrokerService messageBroker)
   {
-    _chatService = chatService;
+    _chatRepository = chatRepository;
     _stockBotService = stockBotService;
-    _logger = logger;
+    _messageBroker = messageBroker;
   }
 
   /// <summary>
@@ -38,49 +37,60 @@ public class ChatHub : Hub, IChatHub
     var userName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {
-      var errorDto = EntityExtensions.CreateErrorDto("Authentication required", "AUTH_REQUIRED");
+      var errorDto = SignalRExtensions.CreateErrorDto("Authentication required", "AUTH_REQUIRED");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     if (string.IsNullOrWhiteSpace(message))
     {
-      var errorDto = EntityExtensions.CreateErrorDto("Message cannot be empty", "EMPTY_MESSAGE");
+      var errorDto = SignalRExtensions.CreateErrorDto("Message cannot be empty", "EMPTY_MESSAGE");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
     if (!int.TryParse(roomId, out int roomIdInt))
     {
-      var errorDto = EntityExtensions.CreateErrorDto("Invalid room ID", "INVALID_ROOM_ID");
+      var errorDto = SignalRExtensions.CreateErrorDto("Invalid room ID", "INVALID_ROOM_ID");
       await Clients.Caller.SendAsync("Error", errorDto);
       return;
     }
 
+    Console.WriteLine($"📨 Received message in room {roomId} from {userName}: {message}");
+
     if (IsStockCommand(message))
     {
+      Console.WriteLine($"🤖 Detected stock command: {message}");
       await HandleStockCommand(roomId, message, userName);
       return;
     }
 
+    Console.WriteLine($"💬 Processing regular message from {userName}");
+
+    var chatMessage = new ChatMessage
+    {
+      Content = message,
+      UserName = userName,
+      ChatRoomId = roomIdInt,
+      IsStockBot = false
+    };
+
     try
     {
-      var result = await _chatService.SendMessageAsync(roomIdInt, message, userName);
+      var savedMessage = await _chatRepository.AddMessageAsync(chatMessage);
       
-      if (!result.IsSuccess)
-      {
-        _logger.LogWarning("Failed to send message: {Error}", result.ErrorMessage);
-        var errorDto = EntityExtensions.CreateErrorDto(result.ErrorMessage, result.ErrorCode);
-        await Clients.Caller.SendAsync("Error", errorDto);
-        return;
-      }
-
-      _logger.LogDebug("✅ Message sent successfully via ChatService for Room_{RoomId}", roomId);
+      Console.WriteLine($"💾 Message saved to DB: ID={savedMessage.Id}, RoomId={savedMessage.ChatRoomId}, User={savedMessage.UserName}");
+      
+      var messageDto = savedMessage.ToSignalRDto();
+      Console.WriteLine($"📡 Broadcasting message to group Room_{roomId}: {System.Text.Json.JsonSerializer.Serialize(messageDto)}");
+      
+      await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
+      Console.WriteLine($"📡 Message broadcast completed for Room_{roomId}");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Failed to send message to Room_{RoomId}", roomId);
-      var errorDto = EntityExtensions.CreateErrorDto("Failed to send message", "SEND_MESSAGE_ERROR");
+      Console.WriteLine($"❌ Error saving/broadcasting message: {ex.Message}");
+      var errorDto = SignalRExtensions.CreateErrorDto("Failed to send message", "SEND_MESSAGE_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }
   }
@@ -114,8 +124,8 @@ public class ChatHub : Hub, IChatHub
       return;
     }
 
-    var roomsResult = await _chatService.GetAllRoomsAsync();
-    if (!roomsResult.IsSuccess || !roomsResult.Data!.Any(r => r.Id == roomIdInt))
+    var rooms = await _chatRepository.GetAllRoomsAsync();
+    if (!rooms.Any(r => r.Id == roomIdInt))
     {
       var errorDto = new SignalRErrorDto
       {
@@ -127,8 +137,35 @@ public class ChatHub : Hub, IChatHub
     }
 
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
-    _logger.LogDebug("🏠 User {UserName} (ConnectionId: {ConnectionId}) joined group Room_{RoomId}", 
-      userName, Context.ConnectionId, roomId);
+    Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
+    
+    _messageBroker.SubscribeToStockResponses(roomId, async (stockResponse) =>
+    {
+      Console.WriteLine($"📈 Received stock response in room {roomId}: {stockResponse.FormattedMessage}");
+      
+      try
+      {
+        var botMessage = new SignalRMessageDto
+        {
+          Id = Random.Shared.Next(100000, 999999),
+          Content = stockResponse.FormattedMessage,
+          UserName = "StockBot",
+          RoomId = int.Parse(stockResponse.RoomId),
+          CreatedAt = stockResponse.ResponseAt,
+          IsStockBot = true
+        };
+
+        Console.WriteLine($"📡 Broadcasting StockBot response to Room_{roomId}: {stockResponse.FormattedMessage}");
+        await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", botMessage);
+        Console.WriteLine($"✅ StockBot response broadcast completed for Room_{roomId}");
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"❌ Error broadcasting StockBot response to Room_{roomId}: {ex.Message}");
+      }
+    });
+    
+    Console.WriteLine($"🔔 Subscribed to stock responses for Room_{roomId}");
     
     var presenceDto = new SignalRUserPresenceDto
     {
@@ -139,7 +176,7 @@ public class ChatHub : Hub, IChatHub
     await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserJoined", presenceDto);
     
     await Clients.Caller.SendAsync("JoinedRoom", roomId);
-    _logger.LogDebug("🏠 User {UserName} successfully joined room {RoomId}", userName, roomId);
+    Console.WriteLine($"🏠 User {userName} successfully joined room {roomId}");
   }
 
   /// <summary>
@@ -161,6 +198,8 @@ public class ChatHub : Hub, IChatHub
     }
 
     await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Room_{roomId}");
+    
+    _messageBroker.UnsubscribeFromStockResponses(roomId);
     
     var presenceDto = new SignalRUserPresenceDto
     {
@@ -207,8 +246,12 @@ public class ChatHub : Hub, IChatHub
   /// <returns>True if the message is a stock command</returns>
   private bool IsStockCommand(string message)
   {
-    return message.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase) && 
-           !string.IsNullOrEmpty(_stockBotService.ExtractStockSymbol(message));
+    var isCommand = message.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase);
+    var hasValidSymbol = isCommand && !string.IsNullOrEmpty(_stockBotService.ExtractStockSymbol(message));
+    
+    Console.WriteLine($"🔍 Checking if '{message}' is stock command: starts with /stock={isCommand}, has valid symbol={hasValidSymbol}");
+    
+    return hasValidSymbol;
   }
 
   /// <summary>
@@ -221,16 +264,24 @@ public class ChatHub : Hub, IChatHub
   {
     try
     {
+      Console.WriteLine($"🤖 Processing stock command in room {roomId}: {command} from {userName}");
+      
       var stockSymbol = _stockBotService.ExtractStockSymbol(command);
       
       if (string.IsNullOrEmpty(stockSymbol))
       {
-        var errorDto = EntityExtensions.CreateErrorDto("Invalid stock command format. Use: /stock=SYMBOL", "INVALID_STOCK_COMMAND");
+        Console.WriteLine($"❌ Invalid stock symbol in command: {command}");
+        var errorDto = SignalRExtensions.CreateErrorDto("Invalid stock command format. Use: /stock=SYMBOL", "INVALID_STOCK_COMMAND");
         await Clients.Caller.SendAsync("Error", errorDto);
         return;
       }
 
+      Console.WriteLine($"📝 Extracted stock symbol: {stockSymbol}");
+      Console.WriteLine($"📤 Queueing stock request for {stockSymbol} in room {roomId}");
+      
       await _stockBotService.QueueStockRequestAsync(stockSymbol, userName, roomId);
+      
+      Console.WriteLine($"✅ Stock request queued successfully for {stockSymbol}");
 
       var ackMessage = new SignalRMessageDto
       {
@@ -242,12 +293,14 @@ public class ChatHub : Hub, IChatHub
         IsStockBot = true
       };
 
+      Console.WriteLine($"📨 Sending acknowledgment message to caller for {stockSymbol}");
       await Clients.Caller.SendAsync("ReceiveMessage", ackMessage);
+      Console.WriteLine($"✅ Acknowledgment sent for {stockSymbol}");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Failed to process stock command in Room_{RoomId}", roomId);
-      var errorDto = EntityExtensions.CreateErrorDto("Failed to process stock command", "STOCK_COMMAND_ERROR");
+      Console.WriteLine($"❌ Error processing stock command '{command}' in room {roomId}: {ex.Message}");
+      var errorDto = SignalRExtensions.CreateErrorDto("Failed to process stock command", "STOCK_COMMAND_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }
   }

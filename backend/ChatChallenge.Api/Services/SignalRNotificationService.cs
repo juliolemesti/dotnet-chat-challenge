@@ -2,19 +2,20 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using ChatChallenge.Application.DTOs;
 using ChatChallenge.Application.Interfaces;
+using ChatChallenge.Api.Hubs;
 
-namespace ChatChallenge.Application.Services;
+namespace ChatChallenge.Api.Services;
 
 /// <summary>
 /// Service for sending SignalR notifications
 /// </summary>
 public class SignalRNotificationService : ISignalRNotificationService
 {
-  private readonly IHubContext<Hub> _hubContext;
+  private readonly IHubContext<ChatHub> _hubContext;
   private readonly ILogger<SignalRNotificationService> _logger;
 
   public SignalRNotificationService(
-    IHubContext<Hub> hubContext,
+    IHubContext<ChatHub> hubContext,
     ILogger<SignalRNotificationService> logger)
   {
     _hubContext = hubContext;

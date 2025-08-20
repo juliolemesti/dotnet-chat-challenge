@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ChatChallenge.Application.Interfaces;
 using ChatChallenge.Application.Services;
-using ChatChallenge.Application.Hubs;
 using ChatChallenge.Core.Entities;
 using ChatChallenge.Core.Interfaces;
 
@@ -15,19 +14,19 @@ namespace ChatChallenge.Tests;
 public class ChatServiceSimpleTests
 {
   private readonly Mock<IChatRepository> _mockChatRepository;
-  private readonly Mock<IHubContext<ChatHub>> _mockHubContext;
+  private readonly Mock<ISignalRNotificationService> _mockSignalRService;
   private readonly Mock<ILogger<ChatService>> _mockLogger;
   private readonly IChatService _chatService;
 
   public ChatServiceSimpleTests()
   {
     _mockChatRepository = new Mock<IChatRepository>();
-    _mockHubContext = new Mock<IHubContext<ChatHub>>();
+    _mockSignalRService = new Mock<ISignalRNotificationService>();
     _mockLogger = new Mock<ILogger<ChatService>>();
 
     _chatService = new ChatService(
       _mockChatRepository.Object,
-      _mockHubContext.Object,
+      _mockSignalRService.Object,
       _mockLogger.Object
     );
   }

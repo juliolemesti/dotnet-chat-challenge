@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using ChatChallenge.Application.Interfaces;
 using ChatChallenge.Application.Services;
-using ChatChallenge.Application.Hubs;
 
 namespace ChatChallenge.Application.Extensions;
 
@@ -20,11 +19,7 @@ public static class ServiceCollectionExtensions
     // Register Application Services
     services.AddScoped<IJwtService, JwtService>();
     services.AddScoped<IStockBotService, StockBotService>();
-    services.AddScoped<ISignalRNotificationService, SignalRNotificationService>();
     services.AddScoped<IChatService, ChatService>();
-
-    // Register SignalR Hub
-    services.AddSignalR();
 
     return services;
   }

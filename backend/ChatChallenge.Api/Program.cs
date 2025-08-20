@@ -8,7 +8,6 @@ using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Infrastructure.Repositories;
 using ChatChallenge.Api.Services;
 using ChatChallenge.Application.Extensions;
-using ChatChallenge.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +35,10 @@ builder.Services.AddSingleton<ChatChallenge.Application.Interfaces.IMessageBroke
 
 // Register Stock Bot Background Service
 builder.Services.AddHostedService<StockBotBackgroundService>();
+
+// Register SignalR
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ChatChallenge.Application.Interfaces.ISignalRNotificationService, SignalRNotificationService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is not configured");
@@ -162,6 +165,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Map SignalR Hub
-app.MapHub<ChatChallenge.Application.Hubs.ChatHub>("/chathub");
+app.MapHub<ChatChallenge.Api.Hubs.ChatHub>("/chathub");
 
 app.Run();

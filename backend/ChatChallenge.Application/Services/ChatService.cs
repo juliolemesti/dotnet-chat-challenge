@@ -4,7 +4,6 @@ using ChatChallenge.Application.Common;
 using ChatChallenge.Application.DTOs;
 using ChatChallenge.Application.Extensions;
 using ChatChallenge.Application.Interfaces;
-using ChatChallenge.Application.Hubs;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
 
@@ -16,16 +15,16 @@ namespace ChatChallenge.Application.Services;
 public class ChatService : IChatService
 {
   private readonly IChatRepository _chatRepository;
-  private readonly IHubContext<ChatHub> _hubContext;
+  private readonly ISignalRNotificationService _signalRService;
   private readonly ILogger<ChatService> _logger;
 
   public ChatService(
     IChatRepository chatRepository,
-    IHubContext<ChatHub> hubContext,
+    ISignalRNotificationService signalRService,
     ILogger<ChatService> logger)
   {
     _chatRepository = chatRepository;
-    _hubContext = hubContext;
+    _signalRService = signalRService;
     _logger = logger;
   }
 
@@ -99,7 +98,7 @@ public class ChatService : IChatService
         savedMessage.Id, savedMessage.ChatRoomId, savedMessage.UserName);
 
       var messageDto = savedMessage.ToSignalRDto();
-      await _hubContext.Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
+      await _signalRService.SendMessageToRoomAsync(roomId, messageDto);
       
       _logger.LogDebug("Message broadcasted to room {RoomId}", roomId);
 
@@ -134,7 +133,7 @@ public class ChatService : IChatService
       _logger.LogInformation("Room created: ID={Id}, Name={Name}", savedRoom.Id, savedRoom.Name);
 
       var roomDto = savedRoom.ToSignalRDto(memberCount: 0);
-      await _hubContext.Clients.All.SendAsync("RoomCreated", roomDto);
+      await _signalRService.BroadcastRoomCreatedAsync(roomDto);
       
       _logger.LogDebug("Room creation broadcasted: {Name}", savedRoom.Name);
 
