@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using ChatChallenge.Api.Services;
 using ChatChallenge.Api.Models;
+using ChatChallenge.Application.Interfaces;
+using ChatChallenge.Application.DTOs;
 
 namespace ChatChallenge.Api.Services
 {
@@ -70,14 +72,21 @@ namespace ChatChallenge.Api.Services
       }
     }
 
-    private async Task ProcessStockRequestAsync(StockRequestMessage request)
+    private async Task ProcessStockRequestAsync(ChatChallenge.Api.Models.StockRequestMessage request)
     {
+      using var scope = _serviceProvider.CreateScope();
+      var signalRNotificationService = scope.ServiceProvider.GetRequiredService<ISignalRNotificationService>();
+      
       try
       {
-        // Call the Stock API service to get the quote
+        _logger.LogInformation("🔍 Calling Stock API for symbol: {Symbol}", request.StockSymbol);
+        
         var result = await _stockApiService.GetStockQuoteAsync(request.StockSymbol);
 
-        var response = new StockResponseMessage
+        _logger.LogInformation("📊 Stock API result for {Symbol}: Success={IsSuccess}, Message={Message}", 
+          request.StockSymbol, result.IsSuccess, result.FormattedMessage);
+
+        var stockResponse = new ChatChallenge.Application.DTOs.StockResponseMessage
         {
           StockSymbol = request.StockSymbol,
           RoomId = request.RoomId,
@@ -88,18 +97,19 @@ namespace ChatChallenge.Api.Services
           FormattedMessage = result.IsSuccess ? result.FormattedMessage : $"Error getting stock quote for {request.StockSymbol}: {result.ErrorMessage}"
         };
 
-        // Publish the response back through the message broker
-        await _messageBrokerService.PublishStockResponseAsync(response);
+        _logger.LogInformation("📤 Sending stock response directly to SignalR - Room: {RoomId}, Symbol: {Symbol}, Message: {Message}",
+          stockResponse.RoomId, stockResponse.StockSymbol, stockResponse.FormattedMessage);
 
-        _logger.LogInformation("Successfully processed stock request for {Symbol}: {Message}",
-          request.StockSymbol, response.FormattedMessage);
+        await signalRNotificationService.SendStockResponseToRoomAsync(stockResponse);
+
+        _logger.LogInformation("✅ Successfully processed and sent stock request for {Symbol}: {Message}",
+          request.StockSymbol, stockResponse.FormattedMessage);
       }
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error processing stock request for symbol: {Symbol}", request.StockSymbol);
 
-        // Send error response
-        var errorResponse = new StockResponseMessage
+        var errorResponse = new ChatChallenge.Application.DTOs.StockResponseMessage
         {
           StockSymbol = request.StockSymbol,
           RoomId = request.RoomId,
@@ -112,11 +122,12 @@ namespace ChatChallenge.Api.Services
 
         try
         {
-          await _messageBrokerService.PublishStockResponseAsync(errorResponse);
+          _logger.LogInformation("📤 Sending error response directly to SignalR - Room: {RoomId}", errorResponse.RoomId);
+          await signalRNotificationService.SendStockResponseToRoomAsync(errorResponse);
         }
-        catch (Exception publishEx)
+        catch (Exception signalREx)
         {
-          _logger.LogError(publishEx, "Failed to publish error response for stock request");
+          _logger.LogError(signalREx, "Failed to send error response via SignalR for stock request");
         }
       }
     }

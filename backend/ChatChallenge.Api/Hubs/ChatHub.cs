@@ -56,11 +56,16 @@ public class ChatHub : Hub
       return;
     }
 
+    Console.WriteLine($"📨 Received message in room {roomId} from {userName}: {message}");
+
     if (IsStockCommand(message))
     {
+      Console.WriteLine($"🤖 Detected stock command: {message}");
       await HandleStockCommand(roomId, message, userName);
       return;
     }
+
+    Console.WriteLine($"💬 Processing regular message from {userName}");
 
     var chatMessage = new ChatMessage
     {
@@ -82,8 +87,9 @@ public class ChatHub : Hub
       await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", messageDto);
       Console.WriteLine($"📡 Message broadcast completed for Room_{roomId}");
     }
-    catch (Exception)
+    catch (Exception ex)
     {
+      Console.WriteLine($"❌ Error saving/broadcasting message: {ex.Message}");
       var errorDto = SignalRExtensions.CreateErrorDto("Failed to send message", "SEND_MESSAGE_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }
@@ -132,6 +138,35 @@ public class ChatHub : Hub
 
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
+    
+    // Subscribe to stock responses for this room
+    _messageBroker.SubscribeToStockResponses(roomId, async (stockResponse) =>
+    {
+      Console.WriteLine($"📈 Received stock response in room {roomId}: {stockResponse.FormattedMessage}");
+      
+      try
+      {
+        var botMessage = new SignalRMessageDto
+        {
+          Id = Random.Shared.Next(100000, 999999),
+          Content = stockResponse.FormattedMessage,
+          UserName = "StockBot",
+          RoomId = int.Parse(stockResponse.RoomId),
+          CreatedAt = stockResponse.ResponseAt,
+          IsStockBot = true
+        };
+
+        Console.WriteLine($"📡 Broadcasting StockBot response to Room_{roomId}: {stockResponse.FormattedMessage}");
+        await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", botMessage);
+        Console.WriteLine($"✅ StockBot response broadcast completed for Room_{roomId}");
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"❌ Error broadcasting StockBot response to Room_{roomId}: {ex.Message}");
+      }
+    });
+    
+    Console.WriteLine($"🔔 Subscribed to stock responses for Room_{roomId}");
     
     var presenceDto = new SignalRUserPresenceDto
     {
@@ -214,8 +249,12 @@ public class ChatHub : Hub
   /// <returns>True if the message is a stock command</returns>
   private bool IsStockCommand(string message)
   {
-    return message.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase) && 
-           !string.IsNullOrEmpty(_stockBotService.ExtractStockSymbol(message));
+    var isCommand = message.StartsWith("/stock=", StringComparison.OrdinalIgnoreCase);
+    var hasValidSymbol = isCommand && !string.IsNullOrEmpty(_stockBotService.ExtractStockSymbol(message));
+    
+    Console.WriteLine($"🔍 Checking if '{message}' is stock command: starts with /stock={isCommand}, has valid symbol={hasValidSymbol}");
+    
+    return hasValidSymbol;
   }
 
   /// <summary>
@@ -228,16 +267,24 @@ public class ChatHub : Hub
   {
     try
     {
+      Console.WriteLine($"🤖 Processing stock command in room {roomId}: {command} from {userName}");
+      
       var stockSymbol = _stockBotService.ExtractStockSymbol(command);
       
       if (string.IsNullOrEmpty(stockSymbol))
       {
+        Console.WriteLine($"❌ Invalid stock symbol in command: {command}");
         var errorDto = SignalRExtensions.CreateErrorDto("Invalid stock command format. Use: /stock=SYMBOL", "INVALID_STOCK_COMMAND");
         await Clients.Caller.SendAsync("Error", errorDto);
         return;
       }
 
+      Console.WriteLine($"📝 Extracted stock symbol: {stockSymbol}");
+      Console.WriteLine($"📤 Queueing stock request for {stockSymbol} in room {roomId}");
+      
       await _stockBotService.QueueStockRequestAsync(stockSymbol, userName, roomId);
+      
+      Console.WriteLine($"✅ Stock request queued successfully for {stockSymbol}");
 
       var ackMessage = new SignalRMessageDto
       {
@@ -249,10 +296,13 @@ public class ChatHub : Hub
         IsStockBot = true
       };
 
+      Console.WriteLine($"📨 Sending acknowledgment message to caller for {stockSymbol}");
       await Clients.Caller.SendAsync("ReceiveMessage", ackMessage);
+      Console.WriteLine($"✅ Acknowledgment sent for {stockSymbol}");
     }
-    catch (Exception)
+    catch (Exception ex)
     {
+      Console.WriteLine($"❌ Error processing stock command '{command}' in room {roomId}: {ex.Message}");
       var errorDto = SignalRExtensions.CreateErrorDto("Failed to process stock command", "STOCK_COMMAND_ERROR");
       await Clients.Caller.SendAsync("Error", errorDto);
     }

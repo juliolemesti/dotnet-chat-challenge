@@ -133,21 +133,24 @@ namespace ChatChallenge.Api.Services
     // Internal method for publishing Application responses
     private async Task PublishStockResponseInternalAsync(StockResponseMessage response)
     {
-      _logger.LogInformation("Publishing stock response for room: {RoomId}", response.RoomId);
-      _logger.LogInformation("Publishing stock response for room: {RoomId}, Symbol: {Symbol}", 
+      _logger.LogInformation("📢 Publishing stock response for room: {RoomId}, Symbol: {Symbol}", 
         response.RoomId, response.StockSymbol);
+      _logger.LogInformation("📢 Stock response message: {Message}", response.FormattedMessage);
 
       if (_stockResponseHandlers.TryGetValue(response.RoomId, out var handlers))
       {
+        _logger.LogInformation("✅ Found {HandlerCount} handlers for room {RoomId}", handlers.Count, response.RoomId);
+        
         var tasks = handlers.Select(handler => 
         {
           try
           {
+            _logger.LogInformation("🚀 Invoking handler for room {RoomId}", response.RoomId);
             return handler(response);
           }
           catch (Exception ex)
           {
-            _logger.LogError(ex, "Error in stock response handler for room: {RoomId}", response.RoomId);
+            _logger.LogError(ex, "❌ Error in stock response handler for room: {RoomId}", response.RoomId);
             return Task.CompletedTask;
           }
         }).ToArray();
@@ -155,11 +158,18 @@ namespace ChatChallenge.Api.Services
         try
         {
           await Task.WhenAll(tasks);
+          _logger.LogInformation("✅ All handlers completed for room {RoomId}", response.RoomId);
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Error executing stock response handlers for room: {RoomId}", response.RoomId);
+          _logger.LogError(ex, "❌ Error executing stock response handlers for room: {RoomId}", response.RoomId);
         }
+      }
+      else
+      {
+        _logger.LogWarning("⚠️ No handlers found for room {RoomId} - stock response will be lost!", response.RoomId);
+        _logger.LogWarning("⚠️ Available rooms with handlers: {AvailableRooms}", 
+          string.Join(", ", _stockResponseHandlers.Keys));
       }
     }
   }
