@@ -10,10 +10,8 @@ public class EncryptionService : IEncryptionService
 
   public EncryptionService(IConfiguration configuration)
   {
-    // Get encryption key from configuration or generate one
-    var keyString = configuration["Encryption:Key"] ?? "MySecretKey12345MySecretKey12345"; // 32 chars for AES-256
+    var keyString = configuration["Encryption:Key"] ?? "MySecretKey12345MySecretKey12345";
 
-    // Ensure the key is the correct length
     if (keyString.Length < 32)
     {
       keyString = keyString.PadRight(32, '0');
@@ -33,7 +31,7 @@ public class EncryptionService : IEncryptionService
 
     using var aes = Aes.Create();
     aes.Key = _key;
-    aes.GenerateIV(); // Generate random IV for each encryption
+    aes.GenerateIV();
 
     var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
     
@@ -44,7 +42,6 @@ public class EncryptionService : IEncryptionService
     cryptoStream.Write(plainTextBytes, 0, plainTextBytes.Length);
     cryptoStream.FlushFinalBlock();
     
-    // Prepend IV to encrypted data
     var encryptedData = memoryStream.ToArray();
     var result = new byte[aes.IV.Length + encryptedData.Length];
     Array.Copy(aes.IV, 0, result, 0, aes.IV.Length);
@@ -62,11 +59,9 @@ public class EncryptionService : IEncryptionService
     {
       var fullCipher = Convert.FromBase64String(cipherText);
       
-      // Extract IV from the beginning
       var iv = new byte[16];
       Array.Copy(fullCipher, 0, iv, 0, iv.Length);
       
-      // Extract encrypted data
       var cipher = new byte[fullCipher.Length - iv.Length];
       Array.Copy(fullCipher, iv.Length, cipher, 0, cipher.Length);
       
@@ -85,9 +80,7 @@ public class EncryptionService : IEncryptionService
     }
     catch (Exception ex)
     {
-      // Log the error for debugging
       Console.WriteLine($"Decryption failed for '{cipherText}': {ex.Message}");
-      // If decryption fails, return the original value (for backward compatibility)
       return cipherText;
     }
   }

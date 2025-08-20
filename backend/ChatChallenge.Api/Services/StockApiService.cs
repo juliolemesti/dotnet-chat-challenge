@@ -41,7 +41,6 @@ public class StockApiService : IStockApiService
     _httpClient = httpClient;
     _logger = logger;
     
-    // Set timeout for API calls
     _httpClient.Timeout = TimeSpan.FromSeconds(10);
   }
 
@@ -51,11 +50,9 @@ public class StockApiService : IStockApiService
     {
       _logger.LogInformation("Fetching stock quote for symbol: {StockSymbol}", stockSymbol);
 
-      // Construct the API URL
       var apiUrl = string.Format(StooqApiUrlTemplate, stockSymbol.ToLowerInvariant());
       _logger.LogDebug("Stock API URL: {ApiUrl}", apiUrl);
 
-      // Make HTTP request
       var response = await _httpClient.GetAsync(apiUrl);
 
       if (!response.IsSuccessStatusCode)
@@ -72,11 +69,9 @@ public class StockApiService : IStockApiService
         };
       }
 
-      // Read CSV response
       var csvContent = await response.Content.ReadAsStringAsync();
       _logger.LogDebug("Stock API CSV response: {CsvContent}", csvContent);
 
-      // Parse CSV and extract price
       var parseResult = ParseStockCsv(csvContent, stockSymbol);
       
       if (parseResult.IsSuccess && parseResult.Price.HasValue)
@@ -166,11 +161,9 @@ public class StockApiService : IStockApiService
         };
       }
 
-      // Skip header row and get the data row
       var dataLine = lines[1].Trim();
       var columns = dataLine.Split(',');
 
-      // Expected format: Symbol,Date,Time,Open,High,Low,Close,Volume
       if (columns.Length < 7)
       {
         return new StockQuoteResult
@@ -182,7 +175,6 @@ public class StockApiService : IStockApiService
         };
       }
 
-      // Extract close price (index 6)
       var closePriceString = columns[6].Trim();
       
       if (string.IsNullOrEmpty(closePriceString) || closePriceString.ToLowerInvariant() == "n/d")
@@ -196,7 +188,6 @@ public class StockApiService : IStockApiService
         };
       }
 
-      // Parse the price
       if (!decimal.TryParse(closePriceString, NumberStyles.Float, CultureInfo.InvariantCulture, out var price))
       {
         return new StockQuoteResult
@@ -208,7 +199,6 @@ public class StockApiService : IStockApiService
         };
       }
 
-      // Create successful result with formatted message
       var formattedMessage = $"{stockSymbol.ToUpperInvariant()} quote is ${price:F2} per share";
       
       return new StockQuoteResult

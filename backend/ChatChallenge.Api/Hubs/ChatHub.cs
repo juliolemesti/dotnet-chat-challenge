@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using ChatChallenge.Application.Interfaces;
+using ChatChallenge.Application.DTOs;
 using ChatChallenge.Api.Services;
 using ChatChallenge.Core.Interfaces;
 using ChatChallenge.Core.Entities;
 using ChatChallenge.Api.Extensions;
-using ChatChallenge.Api.Models;
 
 namespace ChatChallenge.Api.Hubs;
 
@@ -139,7 +139,6 @@ public class ChatHub : Hub
     await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
     Console.WriteLine($"🏠 User {userName} (ConnectionId: {Context.ConnectionId}) joined group Room_{roomId}");
     
-    // Subscribe to stock responses for this room
     _messageBroker.SubscribeToStockResponses(roomId, async (stockResponse) =>
     {
       Console.WriteLine($"📈 Received stock response in room {roomId}: {stockResponse.FormattedMessage}");
@@ -174,10 +173,8 @@ public class ChatHub : Hub
       RoomId = roomId
     };
     
-    // Notify others in the room that user joined
     await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserJoined", presenceDto);
     
-    // Confirm to the caller that they joined successfully
     await Clients.Caller.SendAsync("JoinedRoom", roomId);
     Console.WriteLine($"🏠 User {userName} successfully joined room {roomId}");
   }

@@ -40,7 +40,7 @@ public class UserRepository : IUserRepository
 
   public async Task<User?> GetUserByUserNameAsync(string userName)
   {
-    // Since we use random IVs, we can't encrypt the search term and compare
+    // Since we use rando IVs, we can't encrypt the search term and compare
     // We need to get all users and decrypt their usernames to find the match
     var users = await _context.Users.ToListAsync();
     
@@ -63,14 +63,12 @@ public class UserRepository : IUserRepository
     user.CreatedAt = DateTime.UtcNow;
     user.PasswordHash = _passwordService.HashPassword(password);
     
-    // Encrypt email and username before saving to database
     user.Email = _encryptionService.Encrypt(user.Email);
     user.UserName = _encryptionService.Encrypt(user.UserName);
     
     _context.Users.Add(user);
     await _context.SaveChangesAsync();
     
-    // Decrypt for return value so the caller gets the original values
     user.Email = _encryptionService.Decrypt(user.Email);
     user.UserName = _encryptionService.Decrypt(user.UserName);
     

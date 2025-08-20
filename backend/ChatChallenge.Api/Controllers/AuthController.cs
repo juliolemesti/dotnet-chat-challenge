@@ -46,21 +46,18 @@ public class AuthController : ControllerBase
   [HttpPost("register")]
   public async Task<ActionResult<LoginResponse>> Register([FromBody] RegisterRequest request)
   {
-    // Check if user already exists by email
     var existingUserByEmail = await _userRepository.GetUserByEmailAsync(request.Email);
     if (existingUserByEmail != null)
     {
       return BadRequest(new { message = "User already exists" });
     }
 
-    // Check if username is already taken
     var existingUserByUserName = await _userRepository.GetUserByUserNameAsync(request.UserName);
     if (existingUserByUserName != null)
     {
       return BadRequest(new { message = "User already exists" });
     }
 
-    // Create new user
     var newUser = new User
     {
       Email = request.Email,
@@ -80,7 +77,6 @@ public class AuthController : ControllerBase
     }
     catch (Exception)
     {
-      // In case of any database error during user creation
       return BadRequest(new { message = "Registration failed. Please try again." });
     }
   }

@@ -1,5 +1,5 @@
 using ChatChallenge.Core.Entities;
-using ChatChallenge.Api.Models;
+using ChatChallenge.Application.DTOs;
 
 namespace ChatChallenge.Api.Extensions;
 

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using ChatChallenge.Api.Services;
-using ChatChallenge.Api.Models;
 using ChatChallenge.Application.Interfaces;
 using ChatChallenge.Application.DTOs;
 
@@ -35,25 +34,21 @@ namespace ChatChallenge.Api.Services
         {
           try
           {
-            // Wait for stock requests from the message broker
             var request = await _messageBrokerService.ConsumeStockRequestAsync(stoppingToken);
             
             _logger.LogInformation("Processing stock request for symbol: {Symbol} from user: {User} in room: {RoomId}",
               request.StockSymbol, request.RequestedBy, request.RoomId);
 
-            // Process the stock request
             _ = Task.Run(async () => await ProcessStockRequestAsync(request), stoppingToken);
           }
           catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
           {
-            // Expected when service is stopping
             break;
           }
           catch (Exception ex)
           {
             _logger.LogError(ex, "Error consuming stock request from message broker");
             
-            // Brief delay before retrying to avoid tight loop on persistent errors
             await Task.Delay(1000, stoppingToken);
           }
         }
@@ -72,7 +67,7 @@ namespace ChatChallenge.Api.Services
       }
     }
 
-    private async Task ProcessStockRequestAsync(ChatChallenge.Api.Models.StockRequestMessage request)
+    private async Task ProcessStockRequestAsync(StockRequestMessage request)
     {
       using var scope = _serviceProvider.CreateScope();
       var signalRNotificationService = scope.ServiceProvider.GetRequiredService<ISignalRNotificationService>();

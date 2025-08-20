@@ -15,7 +15,6 @@ public class ChatDbContext : DbContext
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
-    // Configure ChatMessage entity
     modelBuilder.Entity<ChatMessage>(entity =>
     {
       entity.HasKey(e => e.Id);
@@ -30,7 +29,6 @@ public class ChatDbContext : DbContext
         .OnDelete(DeleteBehavior.Cascade);
     });
 
-    // Configure ChatRoom entity
     modelBuilder.Entity<ChatRoom>(entity =>
     {
       entity.HasKey(e => e.Id);
@@ -39,7 +37,6 @@ public class ChatDbContext : DbContext
       entity.HasIndex(e => e.Name).IsUnique();
     });
 
-    // Configure User entity
     modelBuilder.Entity<User>(entity =>
     {
       entity.HasKey(e => e.Id);

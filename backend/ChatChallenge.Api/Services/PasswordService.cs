@@ -6,8 +6,8 @@ namespace ChatChallenge.Api.Services;
 
 public class PasswordService : IPasswordService
 {
-  private const int SaltSize = 16; // 128 bits
-  private const int HashSize = 20; // 160 bits
+  private const int SaltSize = 16;
+  private const int HashSize = 20;
   private const int Iterations = 10000;
 
   public string HashPassword(string password)

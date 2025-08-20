@@ -47,7 +47,6 @@ public class ChatController : ControllerBase
   [HttpPost("rooms/{roomId}/messages")]
   public async Task<ActionResult<ChatMessage>> SendMessage(int roomId, [FromBody] SendMessageRequest request)
   {
-    // Get the username from JWT claims
     var userName = User.FindFirst(ClaimTypes.Name)?.Value;
     if (string.IsNullOrEmpty(userName))
     {

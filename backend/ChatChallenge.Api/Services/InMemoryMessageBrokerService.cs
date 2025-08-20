@@ -2,7 +2,6 @@ using System.Threading.Channels;
 using System.Collections.Concurrent;
 using ChatChallenge.Application.Interfaces;
 using ChatChallenge.Application.DTOs;
-using ApiModels = ChatChallenge.Api.Models;
 
 namespace ChatChallenge.Api.Services
 {
@@ -29,7 +28,6 @@ namespace ChatChallenge.Api.Services
       _stockResponseHandlers = new ConcurrentDictionary<string, List<Func<StockResponseMessage, Task>>>();
     }
 
-    // Implementation of Application.Interfaces.IMessageBrokerService
     public async Task PublishStockRequestAsync(StockRequestMessage request)
     {
       _logger.LogInformation("Publishing stock request for symbol: {Symbol} in room: {RoomId}", 
@@ -57,72 +55,24 @@ namespace ChatChallenge.Api.Services
       _stockResponseHandlers.TryRemove(roomId, out _);
     }
 
-    // Implementation of Api.Services.IMessageBrokerService
-    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockRequestAsync(ApiModels.StockRequestMessage request)
+    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockRequestAsync(StockRequestMessage request)
     {
-      // Convert API model to Application model
-      var appRequest = new StockRequestMessage
-      {
-        StockSymbol = request.StockSymbol,
-        RoomId = request.RoomId,
-        RequestedBy = request.RequestedBy,
-        RequestedAt = request.RequestedAt
-      };
-      
-      await PublishStockRequestAsync(appRequest);
+      await PublishStockRequestAsync(request);
     }
 
-    public async Task<ApiModels.StockRequestMessage> ConsumeStockRequestAsync(CancellationToken cancellationToken = default)
+    public async Task<StockRequestMessage> ConsumeStockRequestAsync(CancellationToken cancellationToken = default)
     {
-      var appRequest = await _stockRequestChannel.Reader.ReadAsync(cancellationToken);
-      
-      // Convert Application model to API model
-      return new ApiModels.StockRequestMessage
-      {
-        StockSymbol = appRequest.StockSymbol,
-        RoomId = appRequest.RoomId,
-        RequestedBy = appRequest.RequestedBy,
-        RequestedAt = appRequest.RequestedAt
-      };
+      return await _stockRequestChannel.Reader.ReadAsync(cancellationToken);
     }
 
-    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockResponseAsync(ApiModels.StockResponseMessage response)
+    async Task ChatChallenge.Api.Services.IMessageBrokerService.PublishStockResponseAsync(StockResponseMessage response)
     {
-      // Convert API model to Application model
-      var appResponse = new StockResponseMessage
-      {
-        StockSymbol = response.StockSymbol,
-        RoomId = response.RoomId,
-        RequestedBy = response.RequestedBy,
-        ResponseAt = response.ResponseAt,
-        IsError = response.IsError,
-        ErrorMessage = response.ErrorMessage,
-        FormattedMessage = response.FormattedMessage
-      };
-
-      await PublishStockResponseInternalAsync(appResponse);
+      await PublishStockResponseInternalAsync(response);
     }
 
-    void ChatChallenge.Api.Services.IMessageBrokerService.SubscribeToStockResponses(string roomId, Func<ApiModels.StockResponseMessage, Task> handler)
+    void ChatChallenge.Api.Services.IMessageBrokerService.SubscribeToStockResponses(string roomId, Func<StockResponseMessage, Task> handler)
     {
-      // Wrap the API handler to convert between models
-      Func<StockResponseMessage, Task> wrappedHandler = async (appResponse) =>
-      {
-        var apiResponse = new ApiModels.StockResponseMessage
-        {
-          StockSymbol = appResponse.StockSymbol,
-          RoomId = appResponse.RoomId,
-          RequestedBy = appResponse.RequestedBy,
-          ResponseAt = appResponse.ResponseAt,
-          IsError = appResponse.IsError,
-          ErrorMessage = appResponse.ErrorMessage,
-          FormattedMessage = appResponse.FormattedMessage
-        };
-        
-        await handler(apiResponse);
-      };
-
-      SubscribeToStockResponses(roomId, wrappedHandler);
+      SubscribeToStockResponses(roomId, handler);
     }
 
     void ChatChallenge.Api.Services.IMessageBrokerService.UnsubscribeFromStockResponses(string roomId)
@@ -130,7 +80,6 @@ namespace ChatChallenge.Api.Services
       UnsubscribeFromStockResponses(roomId);
     }
 
-    // Internal method for publishing Application responses
     private async Task PublishStockResponseInternalAsync(StockResponseMessage response)
     {
       _logger.LogInformation("📢 Publishing stock response for room: {RoomId}, Symbol: {Symbol}", 

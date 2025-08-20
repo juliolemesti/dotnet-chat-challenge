@@ -1,4 +1,4 @@
-using ChatChallenge.Api.Models;
+using ChatChallenge.Application.DTOs;
 
 namespace ChatChallenge.Api.Services
 {

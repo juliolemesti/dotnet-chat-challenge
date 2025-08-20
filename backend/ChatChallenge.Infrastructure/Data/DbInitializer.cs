@@ -10,13 +10,8 @@ public static class DbInitializer
   {
     context.Database.EnsureCreated();
 
-    // Check if database has been seeded
-    if (context.ChatRooms.Any())
-    {
-      return; // DB has been seeded
-    }
+    if (context.ChatRooms.Any()) { return; }
 
-    // Seed default chat rooms
     var defaultRooms = new[]
     {
       new ChatRoom
@@ -33,7 +28,6 @@ public static class DbInitializer
 
     context.ChatRooms.AddRange(defaultRooms);
 
-    // Seed demo users
     var demoUsers = new[]
     {
       new User
@@ -55,7 +49,6 @@ public static class DbInitializer
     context.Users.AddRange(demoUsers);
     context.SaveChanges();
 
-    // Seed some initial messages
     var welcomeMessages = new[]
     {
       new ChatMessage

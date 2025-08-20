@@ -12,13 +12,9 @@ using ChatChallenge.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
-
-// Register Application layer services
 builder.Services.AddApplicationServices();
 
-// Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ChatDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -33,7 +29,7 @@ builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 // Register Stock API service with HttpClient
 builder.Services.AddHttpClient<IStockApiService, StockApiService>();
 
-// Register Message Broker service (in-memory implementation)
+// Register Message Broker service
 builder.Services.AddSingleton<InMemoryMessageBrokerService>();
 builder.Services.AddSingleton<ChatChallenge.Application.Interfaces.IMessageBrokerService>(provider => 
   provider.GetRequiredService<InMemoryMessageBrokerService>());
@@ -43,7 +39,6 @@ builder.Services.AddSingleton<ChatChallenge.Api.Services.IMessageBrokerService>(
 // Register Stock Bot Background Service
 builder.Services.AddHostedService<StockBotBackgroundService>();
 
-// Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is not configured");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new ArgumentNullException("Jwt:Audience is not configured");
@@ -117,7 +112,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -155,7 +149,6 @@ using (var scope = app.Services.CreateScope())
   var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
   var encryptionService = scope.ServiceProvider.GetRequiredService<IEncryptionService>();
   
-  // Initialize the database first
   DbInitializer.Initialize(context, passwordService, encryptionService);
 }
 
@@ -170,7 +163,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Map SignalR Hub (now from Application layer)
+// Map SignalR Hub
 app.MapHub<ChatChallenge.Application.Hubs.ChatHub>("/chathub");
 
 app.Run();
